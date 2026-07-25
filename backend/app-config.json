@@ -1,5 +1,5 @@
 {
-  "command": "python run.py",
+  "command": "python3 run.py",
   "build_path": ".",
   "stack": "python_3_11",
   "env_variables": {
