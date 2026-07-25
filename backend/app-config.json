@@ -1,0 +1,14 @@
+{
+  "command": "uvicorn app.main:app --host 0.0.0.0 --port 8000",
+  "build_path": ".",
+  "stack": "python_3_11",
+  "env_variables": {
+    "JWT_SECRET_KEY": "change-me-in-production-secret-key-12345",
+    "DATABASE_URL": "sqlite:///./crime_intel.db",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "claude-sonnet-4-6",
+    "ALLOWED_ORIGINS": "*"
+  },
+  "memory": 512,
+  "scripts": {}
+}

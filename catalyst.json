@@ -1,0 +1,14 @@
+{
+  "appsail": [
+    {
+      "source": "backend",
+      "name": "backend"
+    }
+  ],
+  "slate": [
+    {
+      "name": "crime-intel-platform",
+      "source": "frontend"
+    }
+  ]
+}
