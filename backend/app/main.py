@@ -1,5 +1,4 @@
 import os
-import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.database import Base, engine, SessionLocal
+from app.database import Base, engine
 from app.routers import (
     auth, cases, dashboard, export, chat, network,
     audit, offenders, analytics, finance, masters,
@@ -15,43 +14,18 @@ from app.routers import (
 )
 from app.routers import admin as admin_router
 from app.routers import import_csv
-from app import rag, models
 from app.limiter import limiter
-
-
-async def _background_startup():
-    """Run seed + RAG build in background so server starts instantly."""
-    await asyncio.sleep(2)  # Let the server bind to port first
-    db = SessionLocal()
-    try:
-        if db.query(models.User).count() == 0:
-            print("--> DB empty, seeding...")
-            import subprocess
-            subprocess.run(["python", "seed.py"], check=False, cwd=os.path.dirname(__file__) + "/..")
-            db.close()
-            db = SessionLocal()
-        try:
-            rag.build_index(db)
-            print("--> RAG index built.")
-        except Exception as e:
-            print(f"--> RAG build skipped: {e}")
-    except Exception as e:
-        print(f"--> Background startup error: {e}")
-    finally:
-        db.close()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables immediately, then seed/RAG in background."""
+    """Create DB tables on startup only."""
     Base.metadata.create_all(bind=engine)
-    asyncio.create_task(_background_startup())
     yield
 
 
 app = FastAPI(title="Crime Intelligence Platform API", version="0.4.0", lifespan=lifespan)
 
-# ── Rate limiter ─────────────────────────────────────────────────────────────
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -60,21 +34,11 @@ _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 if "*" in allowed_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False,
+                       allow_methods=["*"], allow_headers=["*"])
 else:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_credentials=True,
+                       allow_methods=["*"], allow_headers=["*"])
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router)
