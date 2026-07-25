@@ -1,5 +1,5 @@
 {
-  "command": "python3 -m uvicorn app.main:app --host 0.0.0.0 --port $X_ZOHO_CATALYST_LISTEN_PORT",
+  "command": "python3 main.py",
   "build_path": "backend",
   "stack": "python_3_11",
   "env_variables": {
@@ -12,7 +12,5 @@
     "PYTHONDONTWRITEBYTECODE": "1"
   },
   "memory": 512,
-  "scripts": {
-    "prebuild": "pip install -r requirements.txt"
-  }
+  "scripts": {}
 }
