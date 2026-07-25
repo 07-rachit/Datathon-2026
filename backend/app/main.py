@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.database import Base, engine
+from app.database import Base, engine, SessionLocal
 from app.routers import (
     auth, cases, dashboard, export, chat, network,
     audit, offenders, analytics, finance, masters,
@@ -14,13 +14,48 @@ from app.routers import (
 )
 from app.routers import admin as admin_router
 from app.routers import import_csv
+from app import models, auth as app_auth
 from app.limiter import limiter
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create DB tables on startup only."""
+    """Create DB tables and seed demo RBAC users instantly on startup."""
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        if db.query(models.User).filter(models.User.email == "admin@crimeintel.local").first() is None:
+            admin_user = models.User(
+                name="Admin User (DGP Office)",
+                email="admin@crimeintel.local",
+                hashed_password=app_auth.hash_password("Admin@123"),
+                role=models.RoleEnum.admin,
+            )
+            analyst_user = models.User(
+                name="Lead Analyst Priya",
+                email="analyst@crimeintel.local",
+                hashed_password=app_auth.hash_password("Analyst@123"),
+                role=models.RoleEnum.analyst,
+            )
+            investigator_user = models.User(
+                name="Inspector K. Sharma",
+                email="investigator@crimeintel.local",
+                hashed_password=app_auth.hash_password("Investigator@123"),
+                role=models.RoleEnum.investigator,
+            )
+            viewer_user = models.User(
+                name="Junior Duty Officer",
+                email="viewer@crimeintel.local",
+                hashed_password=app_auth.hash_password("Viewer@123"),
+                role=models.RoleEnum.viewer,
+            )
+            db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
+            db.commit()
+            print("--> Seeded default demo RBAC users (Admin@123).")
+    except Exception as e:
+        print(f"--> Demo user seed notice: {e}")
+    finally:
+        db.close()
     yield
 
 
