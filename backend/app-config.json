@@ -1,5 +1,5 @@
 {
-  "command": "sh -c \"python run.py\"",
+  "command": "uvicorn app.main:app --host 0.0.0.0 --port ${X_ZOHO_CATALYST_LISTEN_PORT:-9000}",
   "build_path": ".",
   "stack": "python_3_11",
   "env_variables": {
@@ -12,7 +12,5 @@
     "PYTHONDONTWRITEBYTECODE": "1"
   },
   "memory": 512,
-  "scripts": {
-    "postinstall": "pip install -r requirements.txt"
-  }
+  "scripts": {}
 }
