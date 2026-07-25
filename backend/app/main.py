@@ -1,4 +1,5 @@
 import os
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,28 +19,33 @@ from app import rag, models
 from app.limiter import limiter
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Create tables, auto-seed if empty, build RAG index."""
-    Base.metadata.create_all(bind=engine)
+async def _background_startup():
+    """Run seed + RAG build in background so server starts instantly."""
+    await asyncio.sleep(2)  # Let the server bind to port first
     db = SessionLocal()
     try:
-        try:
-            if db.query(models.User).count() == 0:
-                print("--> Database empty. Running seed pipeline...")
-                import subprocess
-                subprocess.run(["python", "seed.py"], check=False)
-                # Reconnect after seed
-                db.close()
-                db = SessionLocal()
-        except Exception as se:
-            print(f"--> Auto-seed notice: {se}")
+        if db.query(models.User).count() == 0:
+            print("--> DB empty, seeding...")
+            import subprocess
+            subprocess.run(["python", "seed.py"], check=False, cwd=os.path.dirname(__file__) + "/..")
+            db.close()
+            db = SessionLocal()
         try:
             rag.build_index(db)
-        except Exception as re:
-            print(f"--> RAG build notice: {re}")
+            print("--> RAG index built.")
+        except Exception as e:
+            print(f"--> RAG build skipped: {e}")
+    except Exception as e:
+        print(f"--> Background startup error: {e}")
     finally:
         db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create tables immediately, then seed/RAG in background."""
+    Base.metadata.create_all(bind=engine)
+    asyncio.create_task(_background_startup())
     yield
 
 
@@ -53,7 +59,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-# If wildcard is set, allow all origins
 if "*" in allowed_origins:
     app.add_middleware(
         CORSMiddleware,
