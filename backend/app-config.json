@@ -1,5 +1,5 @@
 {
-  "command": "python run.py",
+  "command": "sh -c \"python run.py\"",
   "build_path": ".",
   "stack": "python_3_11",
   "env_variables": {
@@ -7,8 +7,12 @@
     "DATABASE_URL": "sqlite:///./crime_intel.db",
     "ANTHROPIC_API_KEY": "",
     "ANTHROPIC_MODEL": "claude-sonnet-4-6",
-    "ALLOWED_ORIGINS": "*"
+    "ALLOWED_ORIGINS": "*",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1"
   },
   "memory": 512,
-  "scripts": {}
+  "scripts": {
+    "postinstall": "pip install -r requirements.txt"
+  }
 }
