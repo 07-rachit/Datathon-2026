@@ -1,5 +1,5 @@
 {
-  "command": "sh -c \"export PATH=$PATH:/root/.local/bin:~/.local/bin; export PYTHONPATH=$PYTHONPATH:/root/.local/lib/python3.11/site-packages:~/.local/lib/python3.11/site-packages; pip install --no-cache-dir -r requirements_min.txt && python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${X_ZOHO_CATALYST_LISTEN_PORT:-9000}\"",
+  "command": "python3 -m uvicorn app.main:app --host 0.0.0.0 --port $X_ZOHO_CATALYST_LISTEN_PORT",
   "build_path": "backend",
   "stack": "python_3_11",
   "env_variables": {
@@ -12,5 +12,7 @@
     "PYTHONDONTWRITEBYTECODE": "1"
   },
   "memory": 512,
-  "scripts": {}
+  "scripts": {
+    "prebuild": "pip install -r requirements.txt"
+  }
 }
