@@ -1,5 +1,5 @@
 {
-  "command": "sh -c \"python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${X_ZOHO_CATALYST_LISTEN_PORT:-9000}\"",
+  "command": "sh -c \"pip install -r requirements.txt && python3 -m uvicorn app.main:app --host 0.0.0.0 --port ${X_ZOHO_CATALYST_LISTEN_PORT:-9000}\"",
   "build_path": ".",
   "stack": "python_3_11",
   "env_variables": {
@@ -12,5 +12,7 @@
     "PYTHONDONTWRITEBYTECODE": "1"
   },
   "memory": 512,
-  "scripts": {}
+  "scripts": {
+    "preinstall": "pip install -r requirements.txt"
+  }
 }
