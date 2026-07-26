@@ -1,5 +1,5 @@
 {
-  "command": "python3 -m uvicorn app.main:app --host 0.0.0.0 --port 9000",
+  "command": "python3 main.py",
   "build_path": "backend",
   "stack": "python_3_11",
   "env_variables": {
@@ -11,8 +11,5 @@
     "PYTHONUNBUFFERED": "1",
     "PYTHONDONTWRITEBYTECODE": "1"
   },
-  "memory": 512,
-  "scripts": {
-    "prebuild": "pip install -r requirements.txt"
-  }
+  "memory": 512
 }
