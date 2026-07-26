@@ -1,6 +1,6 @@
 """
 Standalone High-Performance Catalyst AppSail Server for CrimeIntel Platform.
-Uses Python Standard Library with 100% Exact JSON Schemas for React Frontend Pages.
+Sends complete, bulletproof CORS headers for browser compatibility across all proxies.
 """
 import os
 import sys
@@ -11,7 +11,7 @@ import http.server
 import socketserver
 from urllib.parse import parse_qs, urlparse
 
-print("--> Starting CrimeIntel AppSail Native Server with Perfect React Schemas...")
+print("--> Starting CrimeIntel AppSail Native Server with Bulletproof CORS...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
@@ -54,6 +54,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
+        self.send_header("Access-Control-Expose-Headers", "*")
 
     def _send_json(self, data, status_code=200):
         body = json.dumps(data).encode("utf-8")
@@ -65,7 +66,8 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        self.send_response(204)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
         self._send_cors_headers()
         self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("Content-Length", "0")
@@ -158,7 +160,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
 
-        # Cases & Search (React expects { total: N, results: [...] } or [...])
+        # Cases & Search
         if path in ("/api/cases", "/api/cases/search"):
             cases_list = [
                 {
