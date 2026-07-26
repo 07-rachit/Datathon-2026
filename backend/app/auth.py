@@ -32,16 +32,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
+        if hashed_password.startswith("plain:"):
+            return plain_password == hashed_password.split("plain:", 1)[1]
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
-        return plain_password == hashed_password
+        return plain_password == hashed_password or hashed_password == f"plain:{plain_password}"
 
 
 def hash_password(password: str) -> str:
     try:
         return pwd_context.hash(password)
-    except Exception:
-        return password
+    except Exception as e:
+        print(f"--> Password hash fallback notice: {e}")
+        return f"plain:{password}"
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -95,5 +98,4 @@ def require_role(*allowed_roles):
     return role_checker
 
 
-# Support both require_role and require_roles
 require_roles = require_role

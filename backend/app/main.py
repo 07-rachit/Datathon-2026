@@ -20,42 +20,45 @@ from app.limiter import limiter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create DB tables and seed demo RBAC users instantly on startup."""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    """Create DB tables and seed demo RBAC users safely on startup."""
     try:
-        if db.query(models.User).filter(models.User.email == "admin@crimeintel.local").first() is None:
-            admin_user = models.User(
-                name="Admin User (DGP Office)",
-                email="admin@crimeintel.local",
-                hashed_password=app_auth.hash_password("Admin@123"),
-                role=models.RoleEnum.admin,
-            )
-            analyst_user = models.User(
-                name="Lead Analyst Priya",
-                email="analyst@crimeintel.local",
-                hashed_password=app_auth.hash_password("Analyst@123"),
-                role=models.RoleEnum.analyst,
-            )
-            investigator_user = models.User(
-                name="Inspector K. Sharma",
-                email="investigator@crimeintel.local",
-                hashed_password=app_auth.hash_password("Investigator@123"),
-                role=models.RoleEnum.investigator,
-            )
-            viewer_user = models.User(
-                name="Junior Duty Officer",
-                email="viewer@crimeintel.local",
-                hashed_password=app_auth.hash_password("Viewer@123"),
-                role=models.RoleEnum.viewer,
-            )
-            db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
-            db.commit()
-            print("--> Seeded default demo RBAC users (Admin@123).")
-    except Exception as e:
-        print(f"--> Demo user seed notice: {e}")
-    finally:
-        db.close()
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            if db.query(models.User).filter(models.User.email == "admin@crimeintel.local").first() is None:
+                admin_user = models.User(
+                    name="Admin User (DGP Office)",
+                    email="admin@crimeintel.local",
+                    hashed_password=app_auth.hash_password("Admin@123"),
+                    role=models.RoleEnum.admin,
+                )
+                analyst_user = models.User(
+                    name="Lead Analyst Priya",
+                    email="analyst@crimeintel.local",
+                    hashed_password=app_auth.hash_password("Analyst@123"),
+                    role=models.RoleEnum.analyst,
+                )
+                investigator_user = models.User(
+                    name="Inspector K. Sharma",
+                    email="investigator@crimeintel.local",
+                    hashed_password=app_auth.hash_password("Investigator@123"),
+                    role=models.RoleEnum.investigator,
+                )
+                viewer_user = models.User(
+                    name="Junior Duty Officer",
+                    email="viewer@crimeintel.local",
+                    hashed_password=app_auth.hash_password("Viewer@123"),
+                    role=models.RoleEnum.viewer,
+                )
+                db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
+                db.commit()
+                print("--> Seeded default demo RBAC users (Admin@123).")
+        except Exception as seed_err:
+            print(f"--> Demo user seed notice: {seed_err}")
+        finally:
+            db.close()
+    except Exception as db_err:
+        print(f"--> DB init notice: {db_err}")
     yield
 
 
