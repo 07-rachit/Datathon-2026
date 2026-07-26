@@ -65,15 +65,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
-allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
-
-if "*" in allowed_origins:
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False,
-                       allow_methods=["*"], allow_headers=["*"])
-else:
-    app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_credentials=True,
-                       allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router)
@@ -94,6 +92,8 @@ app.include_router(collaboration.router)
 app.include_router(notifications.router)
 
 
+@app.get("/")
+@app.get("/health")
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "message": "CrimeIntel Platform Online"}
