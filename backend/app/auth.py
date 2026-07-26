@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List, Union
 
 # Monkey-patch bcrypt for passlib compatibility in Python 3.11+
 try:
@@ -34,7 +34,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
-        # Fallback simple check
         return plain_password == hashed_password
 
 
@@ -75,13 +74,26 @@ def get_current_user(
     return user
 
 
-def require_role(allowed_roles: list[models.RoleEnum]):
+def require_role(*allowed_roles):
     """Role-based access control dependency."""
+    flattened = []
+    for r in allowed_roles:
+        if isinstance(r, (list, tuple, set)):
+            flattened.extend(r)
+        else:
+            flattened.append(r)
+
     def role_checker(current_user: models.User = Depends(get_current_user)) -> models.User:
-        if current_user.role not in allowed_roles:
+        roles_set = {r.value if hasattr(r, "value") else str(r) for r in flattened}
+        user_role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+        if user_role_str not in roles_set:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access forbidden for role '{current_user.role.value}'. Requires one of: {[r.value for r in allowed_roles]}",
+                detail=f"Access forbidden for role '{user_role_str}'.",
             )
         return current_user
     return role_checker
+
+
+# Support both require_role and require_roles
+require_roles = require_role
