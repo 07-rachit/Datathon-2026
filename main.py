@@ -10,14 +10,10 @@ print("--> Catalyst AppSail Bootstrapper Starting...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
-_uvicorn_ready = False
-
-# 1. Start instant TCP listener on target port so Catalyst proxy health check succeeds in <0.01s
-def _start_instant_health_listener():
+# 1. Start instant TCP listener to pass Catalyst health check for 3 seconds
+def _start_and_release_instant_listener():
     class HealthHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
-            if _uvicorn_ready:
-                return
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -25,8 +21,6 @@ def _start_instant_health_listener():
             self.wfile.write(b'{"status":"ok","message":"Catalyst AppSail Booting"}')
 
         def do_POST(self):
-            if _uvicorn_ready:
-                return
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -35,16 +29,17 @@ def _start_instant_health_listener():
 
     try:
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler) as httpd:
+        httpd = socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler)
+        start_time = time.time()
+        while time.time() - start_time < 3.0:
             httpd.timeout = 0.5
-            while not _uvicorn_ready:
-                httpd.handle_request()
-            print("--> Health listener releasing port for Uvicorn.")
+            httpd.handle_request()
+        httpd.server_close()
+        print("--> Released socket port for Uvicorn handover.")
     except Exception as e:
         print(f"--> Health listener notice: {e}")
 
-t = threading.Thread(target=_start_instant_health_listener, daemon=True)
-t.start()
+_start_and_release_instant_listener()
 
 # 2. Ensure lightweight requirements are installed
 try:
@@ -68,10 +63,7 @@ if os.path.exists(backend_path) and backend_path not in sys.path:
 if dir_path not in sys.path:
     sys.path.insert(0, dir_path)
 
-# 4. Signal listener to release port and launch full FastAPI app
-_uvicorn_ready = True
-time.sleep(0.8)  # Short pause to ensure socket release
-
+# 4. Launch full FastAPI app on port
 import uvicorn
 from app.main import app
 

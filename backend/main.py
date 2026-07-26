@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import subprocess
-import threading
 import socketserver
 import http.server
 
@@ -10,13 +9,9 @@ print("--> Catalyst AppSail Bootstrapper Starting...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
-_uvicorn_ready = False
-
-def _start_instant_health_listener():
+def _start_and_release_instant_listener():
     class HealthHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
-            if _uvicorn_ready:
-                return
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -24,8 +19,6 @@ def _start_instant_health_listener():
             self.wfile.write(b'{"status":"ok","message":"Catalyst AppSail Booting"}')
 
         def do_POST(self):
-            if _uvicorn_ready:
-                return
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -34,16 +27,17 @@ def _start_instant_health_listener():
 
     try:
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler) as httpd:
+        httpd = socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler)
+        start_time = time.time()
+        while time.time() - start_time < 3.0:
             httpd.timeout = 0.5
-            while not _uvicorn_ready:
-                httpd.handle_request()
-            print("--> Health listener releasing port for Uvicorn.")
+            httpd.handle_request()
+        httpd.server_close()
+        print("--> Released socket port for Uvicorn handover.")
     except Exception as e:
         print(f"--> Health listener notice: {e}")
 
-t = threading.Thread(target=_start_instant_health_listener, daemon=True)
-t.start()
+_start_and_release_instant_listener()
 
 try:
     import uvicorn
@@ -64,9 +58,6 @@ except ImportError:
 dir_path = os.path.dirname(os.path.abspath(__file__))
 if dir_path not in sys.path:
     sys.path.insert(0, dir_path)
-
-_uvicorn_ready = True
-time.sleep(0.8)
 
 import uvicorn
 from app.main import app
