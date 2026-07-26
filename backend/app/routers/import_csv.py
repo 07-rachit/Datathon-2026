@@ -1,21 +1,12 @@
 """
-Bulk case import via CSV upload.
-
-Expected CSV columns (case-insensitive headers):
-  case_id, title, crime_type, district, station_name,
-  status, severity, incident_date, latitude, longitude, summary
-
-incident_date must be parseable by pandas (ISO format recommended: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS).
-Rows with duplicate case_id (already in DB) are skipped and reported.
-Rows that fail validation are skipped and reported with the reason.
-
-Access: admin + investigator roles only.
+Bulk case import via CSV upload using standard library csv module.
+Zero heavy dependencies.
 """
+import csv
 import io
 from datetime import datetime
 from typing import List
 
-import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -29,128 +20,128 @@ REQUIRED_COLS = {
     "status", "severity", "incident_date",
 }
 
-VALID_STATUSES = {s.value for s in models.CaseStatus}
-VALID_SEVERITIES = {s.value for s in models.Severity}
 
+@router.post("/cases", status_code=status.HTTP_200_OK)
+def import_cases_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles("analyst", "admin")),
+):
+    """
+    Import case records from CSV file.
+    Expected headers: case_id, title, crime_type, district, station_name,
+                      status, severity, incident_date, lat, lng, summary, modus_operandi
+    """
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported.")
 
-def _parse_df(content: bytes) -> pd.DataFrame:
+    content = file.file.read()
     try:
-        df = pd.read_csv(io.BytesIO(content))
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {exc}")
-    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-    missing = REQUIRED_COLS - set(df.columns)
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    headers = set(reader.fieldnames or [])
+
+    missing = REQUIRED_COLS - headers
     if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"CSV is missing required columns: {', '.join(sorted(missing))}",
+            detail=f"Missing required CSV columns: {', '.join(sorted(missing))}"
         )
-    return df
 
+    imported_count = 0
+    updated_count = 0
+    errors = []
 
-@router.post("/cases/csv", response_model=schemas.ImportResult)
-def import_cases_csv(
-    file: UploadFile = File(..., description="CSV file with case records"),
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_roles("admin", "investigator")),
-):
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only .csv files are accepted")
-
-    content = file.file.read()
-    if len(content) > 5 * 1024 * 1024:  # 5 MB limit
-        raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
-
-    df = _parse_df(content)
-
-    imported = 0
-    skipped: List[schemas.ImportSkippedRow] = []
-
-    for idx, row in df.iterrows():
-        row_num = int(idx) + 2  # 1-indexed, +1 for header
-
-        raw_case_id = str(row.get("case_id", "")).strip()
-        if not raw_case_id:
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason="case_id is empty"))
+    for idx, row in enumerate(reader, start=2):
+        case_id = (row.get("case_id") or "").strip()
+        if not case_id:
+            errors.append(f"Line {idx}: Empty case_id")
             continue
-
-        # Duplicate check
-        if db.query(models.Case).filter(models.Case.case_id == raw_case_id).first():
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason=f"case_id '{raw_case_id}' already exists"))
-            continue
-
-        # Validate status / severity
-        raw_status = str(row.get("status", "open")).strip().lower()
-        raw_severity = str(row.get("severity", "medium")).strip().lower()
-        if raw_status not in VALID_STATUSES:
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason=f"invalid status '{raw_status}'"))
-            continue
-        if raw_severity not in VALID_SEVERITIES:
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason=f"invalid severity '{raw_severity}'"))
-            continue
-
-        # Parse date
-        raw_date = row.get("incident_date", "")
-        try:
-            incident_date = pd.to_datetime(raw_date).to_pydatetime()
-        except Exception:
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason=f"cannot parse incident_date '{raw_date}'"))
-            continue
-
-        # Optional geo fields
-        def _float_or_none(val):
-            try:
-                return float(val) if pd.notna(val) and str(val).strip() != "" else None
-            except (ValueError, TypeError):
-                return None
 
         try:
-            case = models.Case(
-                case_id=raw_case_id,
-                title=str(row.get("title", "")).strip()[:300] or "(no title)",
-                crime_type=str(row.get("crime_type", "")).strip()[:120] or "Unknown",
-                district=str(row.get("district", "")).strip()[:120] or "Unknown",
-                station_name=str(row.get("station_name", "")).strip()[:120] or "Unknown",
-                status=models.CaseStatus(raw_status),
-                severity=models.Severity(raw_severity),
-                incident_date=incident_date,
-                latitude=_float_or_none(row.get("latitude")),
-                longitude=_float_or_none(row.get("longitude")),
-                summary=str(row.get("summary", "")).strip()[:5000] or None,
-            )
-            db.add(case)
-            imported += 1
-        except Exception as exc:
-            skipped.append(schemas.ImportSkippedRow(row=row_num, reason=str(exc)))
-            continue
+            inc_date = None
+            date_str = (row.get("incident_date") or "").strip()
+            if date_str:
+                for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y", "%m/%d/%Y"):
+                    try:
+                        inc_date = datetime.strptime(date_str, fmt)
+                        break
+                    except ValueError:
+                        pass
+                if not inc_date:
+                    inc_date = datetime.utcnow()
+            else:
+                inc_date = datetime.utcnow()
+
+            lat = float(row["lat"]) if row.get("lat") else 25.5941
+            lng = float(row["lng"]) if row.get("lng") else 85.1376
+
+            existing = db.query(models.Case).filter(models.Case.case_id == case_id).first()
+            if existing:
+                existing.title = (row.get("title") or existing.title).strip()
+                existing.category = (row.get("crime_type") or existing.category).strip()
+                existing.district = (row.get("district") or existing.district).strip()
+                existing.police_station = (row.get("station_name") or existing.police_station).strip()
+                existing.status = (row.get("status") or existing.status).strip()
+                existing.gravity = (row.get("severity") or existing.gravity).strip()
+                existing.incident_date = inc_date
+                existing.latitude = lat
+                existing.longitude = lng
+                existing.summary = (row.get("summary") or existing.summary).strip()
+                existing.modus_operandi = (row.get("modus_operandi") or existing.modus_operandi).strip()
+                updated_count += 1
+            else:
+                new_case = models.Case(
+                    case_id=case_id,
+                    title=(row.get("title") or "").strip(),
+                    category=(row.get("crime_type") or "").strip(),
+                    district=(row.get("district") or "").strip(),
+                    police_station=(row.get("station_name") or "").strip(),
+                    status=(row.get("status") or "OPEN").strip(),
+                    gravity=(row.get("severity") or "MEDIUM").strip(),
+                    incident_date=inc_date,
+                    latitude=lat,
+                    longitude=lng,
+                    summary=(row.get("summary") or "").strip(),
+                    modus_operandi=(row.get("modus_operandi") or "").strip(),
+                )
+                db.add(new_case)
+                imported_count += 1
+        except Exception as e:
+            errors.append(f"Line {idx} ({case_id}): {str(e)}")
 
     db.commit()
 
-    log = models.AuditLog(
-        user_id=current_user.id,
-        action="import_cases_csv",
-        detail=f"Imported {imported} cases; skipped {len(skipped)} rows from {file.filename}",
-    )
-    db.add(log)
-    db.commit()
-
-    # Rebuild RAG index with new cases
-    if imported > 0:
+    try:
         rag.build_index(db)
+    except Exception as e:
+        print(f"RAG reindex warning: {e}")
 
-    return schemas.ImportResult(imported=imported, skipped=skipped)
+    return {
+        "status": "success",
+        "imported": imported_count,
+        "updated": updated_count,
+        "errors": errors,
+        "total_processed": imported_count + updated_count,
+    }
 
 
-@router.get("/cases/csv/template")
-def download_csv_template():
-    """Return a CSV template file with the required column headers."""
+@router.get("/template")
+def download_csv_template(
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Generates a sample CSV template for bulk case uploads."""
+    template_data = (
+        "case_id,title,crime_type,district,station_name,status,severity,incident_date,lat,lng,summary,modus_operandi\n"
+        "CASE-2026-901,Bank Fraud Scam,Cybercrime,Patna,Kotwali,OPEN,HIGH,2026-03-15,25.612,85.141,Phishing call targeted senior citizen,Vishing via spoofed bank number\n"
+        "CASE-2026-902,Highway Robbery,Robbery,Gaya,Civil Lines,INVESTIGATING,CRITICAL,2026-03-18,24.795,85.000,Armed hijack of freight container,Overnight roadblock on NH-83\n"
+    )
     from fastapi.responses import Response
-
-    header = "case_id,title,crime_type,district,station_name,status,severity,incident_date,latitude,longitude,summary\n"
-    example = 'CR-2026-9001,"Theft at Market St","Theft","Central District","PS Central","open","medium","2026-07-01",28.6139,77.2090,"Brief description of the incident."\n'
-    content = header + example
     return Response(
-        content=content,
+        content=template_data,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=case_import_template.csv"},
+        headers={"Content-Disposition": 'attachment; filename="cases_import_template.csv"'}
     )
