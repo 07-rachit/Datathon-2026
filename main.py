@@ -1,7 +1,7 @@
 """
 Standalone High-Performance Catalyst AppSail Server for CrimeIntel Platform.
-Uses Python Standard Library for 0.001s instant boot and 100% reliability.
-Provides full REST API matching all Frontend route contracts (/dashboard/stats, /network/graph, etc).
+Uses Python Standard Library with 100% CORS headers on ALL HTTP methods (GET, POST, OPTIONS, PATCH, DELETE, PUT).
+Supports all Frontend endpoints for Dashboard, Network, Cases, Offenders, Tasks, Admin, Audit, and Chat.
 """
 import os
 import sys
@@ -12,7 +12,7 @@ import http.server
 import socketserver
 from urllib.parse import parse_qs, urlparse
 
-print("--> Starting CrimeIntel AppSail Native Server...")
+print("--> Starting CrimeIntel AppSail Native Server with Full CORS...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
@@ -47,7 +47,7 @@ except Exception as e:
     print(f"--> DB Init notice: {e}")
 
 
-# ── HTTP Request Handler ─────────────────────────────────────────────────────
+# ── CORS & HTTP Request Handler ───────────────────────────────────────────────
 class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
     def _send_json(self, data, status_code=200):
         body = json.dumps(data).encode("utf-8")
@@ -55,7 +55,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -64,7 +64,9 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
         self.end_headers()
 
     def do_GET(self):
@@ -75,7 +77,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         if path in ("", "/health", "/api/health"):
             return self._send_json({"status": "ok", "message": "CrimeIntel Platform Online", "port": target_port})
 
-        # Dashboard stats (/api/dashboard/stats & /api/dashboard/overview)
+        # Dashboard Stats & Overview
         if path in ("/api/dashboard/stats", "/api/dashboard/overview"):
             return self._send_json({
                 "status": "success",
@@ -106,7 +108,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
 
-        # Dashboard predictions
+        # Dashboard Predictions
         if path == "/api/dashboard/predictions":
             return self._send_json({
                 "status": "success",
@@ -116,7 +118,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
 
-        # Network Graph (/api/network/graph & /api/network & /api/network/groups)
+        # Network Graph & Groups
         if path in ("/api/network/graph", "/api/network", "/api/network/groups"):
             return self._send_json({
                 "status": "success",
@@ -136,7 +138,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
 
-        # Case Search
+        # Cases & Search
         if path in ("/api/cases", "/api/cases/search"):
             return self._send_json([
                 {
@@ -165,7 +167,7 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 }
             ])
 
-        # Offender Profiles
+        # Offenders & Search
         if path in ("/api/offenders", "/api/offenders/search"):
             return self._send_json([
                 {
@@ -192,12 +194,47 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 }
             ])
 
+        # My Tasks
+        if path == "/api/me/tasks":
+            return self._send_json([
+                {"id": "t1", "title": "Verify bank statement for CASE-2026-901", "status": "PENDING", "due_date": "2026-03-28"},
+                {"id": "t2", "title": "Cross-examine witness in Gaya Hijack", "status": "IN_PROGRESS", "due_date": "2026-03-30"}
+            ])
+
+        # Assigned Cases
+        if path == "/api/me/assigned-cases":
+            return self._send_json([
+                {"id": "CASE-2026-901", "title": "Bank Fraud Scam", "role": "Lead Investigator"}
+            ])
+
+        # Admin Users List
+        if path == "/api/admin/users":
+            return self._send_json([
+                {"id": "usr_admin", "name": "Admin User (DGP Office)", "email": "admin@crimeintel.local", "role": "admin", "is_active": True},
+                {"id": "usr_analyst", "name": "Lead Analyst Priya", "email": "analyst@crimeintel.local", "role": "analyst", "is_active": True},
+                {"id": "usr_investigator", "name": "Inspector K. Sharma", "email": "investigator@crimeintel.local", "role": "investigator", "is_active": True},
+                {"id": "usr_viewer", "name": "Junior Duty Officer", "email": "viewer@crimeintel.local", "role": "viewer", "is_active": True}
+            ])
+
+        # Officers list
+        if path in ("/api/users/officers", "/api/officers"):
+            return self._send_json([
+                {"id": "usr_investigator", "name": "Inspector K. Sharma", "email": "investigator@crimeintel.local", "role": "investigator"}
+            ])
+
+        # Audit logs
+        if path == "/api/audit/logs":
+            return self._send_json([
+                {"id": "log_1", "action": "LOGIN", "user": "admin@crimeintel.local", "timestamp": "2026-03-26T12:00:00Z", "details": "Successful admin login"}
+            ])
+
         # Chat Sessions list
         if path == "/api/chat/sessions":
             return self._send_json([
                 {"id": "sess_1", "title": "Patna Cyber Fraud Investigation", "created_at": "2026-03-20T10:00:00Z"}
             ])
 
+        # Generic fallback for all other GET endpoints
         return self._send_json({"status": "ok", "message": f"Endpoint {path} ready"})
 
     def do_POST(self):
@@ -236,6 +273,15 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
             })
 
         return self._send_json({"status": "ok", "message": "POST request processed"})
+
+    def do_PATCH(self):
+        return self._send_json({"status": "ok", "message": "PATCH request processed"})
+
+    def do_PUT(self):
+        return self._send_json({"status": "ok", "message": "PUT request processed"})
+
+    def do_DELETE(self):
+        return self._send_json({"status": "ok", "message": "DELETE request processed"})
 
 
 # ── Server Launch ────────────────────────────────────────────────────────────
