@@ -1,5 +1,7 @@
 import os
 import sys
+import site
+import glob
 import threading
 import subprocess
 import socketserver
@@ -7,6 +9,18 @@ import http.server
 import time
 
 print("--> Catalyst AppSail Smart Bootstrapper Launching...")
+
+# Ensure user site-packages are in sys.path
+try:
+    user_site = site.getusersitepackages()
+    if user_site and user_site not in sys.path:
+        sys.path.insert(0, user_site)
+except Exception:
+    pass
+
+for p in glob.glob("/root/.local/lib/python*/site-packages") + glob.glob("/home/*/.local/lib/python*/site-packages") + glob.glob("/usr/local/lib/python*/site-packages"):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
