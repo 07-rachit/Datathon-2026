@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({ 
-  baseURL: "/api" 
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://backend-50044348119.development.catalystappsail.in/api" 
 });
 
 api.interceptors.request.use((config) => {
