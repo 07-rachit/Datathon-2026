@@ -1,20 +1,23 @@
 """
 Lightweight RAG retrieval layer.
 
-Uses TF-IDF + cosine similarity as the "vector search" step (no external
-embedding downloads needed, so it runs anywhere). Swap `_vectorizer` /
-`_matrix` for a real embedding model + vector DB (e.g. pgvector, Chroma,
-Pinecone) later without changing the router code, since `retrieve()` is
-the only function callers depend on.
+Uses TF-IDF + cosine similarity as the "vector search" step.
+Falls back safely to keyword search if sklearn is unavailable.
 """
 import threading
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sqlalchemy.orm import Session, joinedload
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    TfidfVectorizer = None
+    cosine_similarity = None
 
+from sqlalchemy.orm import Session, joinedload
 from app import models
 
 
@@ -29,124 +32,91 @@ class Chunk:
 
 _lock = threading.Lock()
 _chunks: List[Chunk] = []
-_vectorizer: TfidfVectorizer | None = None
+_vectorizer = None
 _matrix = None
 
 
-def _case_to_chunks(case: models.Case) -> List[Chunk]:
-    chunks = []
-
-    fir = case.fir_details
-    comp = case.complainant
-    
-    fir_text = ""
-    if fir:
-        fir_text = (
-            f"Crime No: {fir.crime_no}. Category: {fir.category.name if fir.category else ''}. "
-            f"Gravity: {fir.gravity.name if fir.gravity else ''}. "
-            f"Crime Head: {fir.crime_head.name if fir.crime_head else ''}. "
-            f"Sub Head: {fir.crime_sub_head.name if fir.crime_sub_head else ''}. "
-        )
-
-    act_sec_text = ""
-    if case.act_sections:
-        act_sec_text = "Acts and Sections: " + "; ".join(
-            f"{a.act.name if a.act else ''} Section {a.section.section_number if a.section else ''}"
-            for a in case.act_sections
-        )
-
-    overview = (
-        f"Case {case.case_id}: {case.title}. "
-        f"Crime type: {case.crime_type}. District: {case.district}. "
-        f"Station: {case.station_name}. Status: {case.status.value}. "
-        f"Severity: {case.severity.value}. "
-        f"Incident date: {case.incident_date.strftime('%d %b %Y')}. "
-        f"{fir_text} {act_sec_text} "
-        f"Summary: {case.summary or 'No summary recorded.'}"
-    )
-    chunks.append(Chunk(f"{case.id}-overview", case.id, case.case_id, "overview", overview))
-
-    people_bits = [
-        f"{p.name} ({p.role_in_case or 'unspecified role'}, phone {p.phone_number or 'unknown'})"
-        for p in case.persons
-    ]
-    if comp:
-        people_bits.append(f"Complainant: {comp.name}")
-
-    evidence_bits = [f"{e.description}" for e in case.evidence]
-    if people_bits or evidence_bits:
-        text = f"Case {case.case_id} people and evidence. "
-        if people_bits:
-            text += "Persons of interest: " + "; ".join(people_bits) + ". "
-        if evidence_bits:
-            text += "Evidence collected: " + "; ".join(evidence_bits) + "."
-        chunks.append(Chunk(f"{case.id}-people_evidence", case.id, case.case_id, "people_evidence", text))
-
-    return chunks
-
-
-def build_index(db: Session) -> int:
-    """Rebuild the in-memory TF-IDF index from all cases in the DB."""
+def build_index(db: Session):
+    """Chunk all cases currently in DB and fit the TF-IDF matrix."""
     global _chunks, _vectorizer, _matrix
+    if not HAS_SKLEARN:
+        print("--> RAG notice: scikit-learn unavailable, using keyword retrieval fallback.")
+        return
 
     cases = (
         db.query(models.Case)
         .options(
-            joinedload(models.Case.persons),
-            joinedload(models.Case.evidence),
-            joinedload(models.Case.fir_details),
-            joinedload(models.Case.complainant),
-            joinedload(models.Case.act_sections),
+            joinedload(models.Case.fir),
+            joinedload(models.Case.accused_list).joinedload(models.Accused.offender),
+            joinedload(models.Case.victim_list),
+            joinedload(models.Case.witness_list),
+            joinedload(models.Case.evidence_list),
         )
         .all()
     )
 
     new_chunks: List[Chunk] = []
-    for case in cases:
-        new_chunks.extend(_case_to_chunks(case))
+    for c in cases:
+        fir_no = c.fir.fir_number if c.fir else ""
+        overview_text = f"Case {c.case_id} ({c.title}): Category {c.category}, Gravity {c.gravity}. Status {c.status}. Location {c.district}, {c.police_station}. FIR: {fir_no}. Summary: {c.summary or ''} MO: {c.modus_operandi or ''}"
+        new_chunks.append(Chunk(f"{c.case_id}_overview", c.case_id, c.case_id, "overview", overview_text))
+
+        people = []
+        for acc in c.accused_list or []:
+            name = acc.offender.full_name if acc.offender else acc.name
+            people.append(f"Accused {name} (role: {acc.role_in_crime or ''})")
+        for vic in c.victim_list or []:
+            people.append(f"Victim {vic.name}")
+        for wit in c.witness_list or []:
+            people.append(f"Witness {wit.name}")
+        for ev in c.evidence_list or []:
+            people.append(f"Evidence {ev.item_type}: {ev.description or ''}")
+
+        if people:
+            people_text = f"Case {c.case_id} Entities & Evidence: " + "; ".join(people)
+            new_chunks.append(Chunk(f"{c.case_id}_people", c.case_id, c.case_id, "people_evidence", people_text))
+
+    if not new_chunks:
+        return
+
+    vec = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
+    mat = vec.fit_transform([ch.text for ch in new_chunks])
 
     with _lock:
         _chunks = new_chunks
-        if _chunks:
-            _vectorizer = TfidfVectorizer(
-                stop_words="english",
-                ngram_range=(1, 2),
-                token_pattern=r"(?u)\b\w+\b",
-                max_features=10000,
-            )
-            _matrix = _vectorizer.fit_transform([c.text for c in _chunks])
-        else:
-            _vectorizer = None
-            _matrix = None
-
-    return len(_chunks)
+        _vectorizer = vec
+        _matrix = mat
 
 
-def retrieve(query: str, top_k: int = 5) -> List[Tuple[Chunk, float]]:
-    """Return the top_k most relevant chunks for a natural-language query."""
+def retrieve(query: str, top_k: int = 3) -> List[Chunk]:
+    """Return top_k most relevant chunks for a user query."""
     with _lock:
-        if not _chunks or _vectorizer is None or _matrix is None:
+        if not _chunks:
             return []
-        try:
-            query_vec = _vectorizer.transform([query])
-            scores = cosine_similarity(query_vec, _matrix)[0]
-            ranked = sorted(zip(_chunks, scores), key=lambda x: x[1], reverse=True)
-            results = [(chunk, float(score)) for chunk, score in ranked if score > 0.0]
-            return results[:top_k]
-        except Exception:
-            return []
+        if not HAS_SKLEARN or _vectorizer is None or _matrix is None:
+            # Fallback simple keyword match
+            keywords = [k.lower() for k in query.split() if len(k) > 2]
+            scored = []
+            for ch in _chunks:
+                score = sum(1 for kw in keywords if kw in ch.text.lower())
+                if score > 0:
+                    scored.append((ch, float(score)))
+            scored.sort(key=lambda x: x[1], reverse=True)
+            return [ch for ch, _ in scored[:top_k]]
 
+        query_vec = _vectorizer.transform([query])
+        scores = cosine_similarity(query_vec, _matrix)[0]
 
-def get_case_chunks(case_id: str):
-    """Return all indexed chunks belonging to one case (used for direct case-ID lookups)."""
-    with _lock:
-        return [c for c in _chunks if c.case_id == case_id]
+        ranked = sorted(zip(_chunks, scores), key=lambda x: x[1], reverse=True)
+        return [chunk for chunk, score in ranked[:top_k] if score > 0.05]
 
 
 def similar_to_case(case_id: str, top_k: int = 4):
-    """Find other cases textually similar to a given case (for the 'Similar Cases' panel)."""
+    """Find other cases textually similar to a given case."""
     with _lock:
-        if not _chunks or _vectorizer is None or _matrix is None:
+        if not _chunks:
+            return []
+        if not HAS_SKLEARN or _vectorizer is None or _matrix is None:
             return []
         own_chunks = [c for c in _chunks if c.case_id == case_id and c.section == "overview"]
         if not own_chunks:
