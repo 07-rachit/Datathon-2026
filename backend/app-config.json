@@ -1,5 +1,5 @@
 {
-  "command": "sh -c \"pip install -r requirements.txt && python3 main.py\"",
+  "command": "python3 main.py",
   "build_path": ".",
   "stack": "python_3_11",
   "env_variables": {
