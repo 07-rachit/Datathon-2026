@@ -51,15 +51,15 @@ try:
     import sqlalchemy
     import pydantic
 except ImportError:
-    print("--> Installing dependencies from requirements.txt...")
+    print("--> Fast-installing binary wheels from requirements.txt...")
     req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
     if not os.path.exists(req_file):
         req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "requirements.txt")
     
     if os.path.exists(req_file):
-        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "-r", req_file])
+        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--prefer-binary", "-r", req_file])
     else:
-        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "fastapi", "uvicorn[standard]", "sqlalchemy", "pydantic", "pydantic-settings", "python-jose[cryptography]", "passlib[bcrypt]", "python-multipart", "bcrypt", "email-validator", "slowapi"])
+        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "--prefer-binary", "fastapi", "uvicorn[standard]", "sqlalchemy", "pydantic", "pydantic-settings", "python-jose[cryptography]", "passlib[bcrypt]", "python-multipart", "bcrypt", "email-validator", "slowapi"])
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 if dir_path not in sys.path:
