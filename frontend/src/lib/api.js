@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({ 
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://backend-50044348119.development.catalystappsail.in/api" 
+  baseURL: "/api" 
 });
 
 api.interceptors.request.use((config) => {
@@ -35,7 +35,6 @@ export function getCurrentUser() {
 export function getToken() {
   return localStorage.getItem("ci_token");
 }
-
 
 export async function fetchDashboardStats() {
   const { data } = await api.get("/dashboard/stats");
@@ -91,8 +90,6 @@ export async function cancelAgentAction(actionId) {
   const { data } = await api.post(`/chat/assistant/actions/${actionId}/cancel`);
   return data;
 }
-
-
 
 export async function downloadChatTranscript(sessionId, filenameHint) {
   const response = await api.get(`/export/chat/${sessionId}/report`, { responseType: "blob" });
@@ -224,8 +221,6 @@ export async function fetchSeasonalTrends() {
   return data;
 }
 
-// ── Sprint 6: Collaboration & My Work APIs ───────────────────────────────────
-
 export async function fetchCaseComments(caseId) {
   const { data } = await api.get(`/cases/${caseId}/comments`);
   return data;
@@ -292,5 +287,3 @@ export async function fetchOfficers() {
 }
 
 export default api;
-
-
