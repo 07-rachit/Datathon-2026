@@ -1,6 +1,6 @@
 """
 Standalone High-Performance Catalyst AppSail Server for CrimeIntel Platform.
-Sends complete, bulletproof CORS headers for browser compatibility across all proxies.
+Sends explicit Slate origin fallback in Access-Control-Allow-Origin for 100% CORS reliability.
 """
 import os
 import sys
@@ -11,7 +11,7 @@ import http.server
 import socketserver
 from urllib.parse import parse_qs, urlparse
 
-print("--> Starting CrimeIntel AppSail Native Server with Bulletproof CORS...")
+print("--> Starting CrimeIntel AppSail Native Server with Explicit Slate CORS Fallback...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
@@ -49,7 +49,7 @@ except Exception as e:
 # ── CORS & HTTP Request Handler ───────────────────────────────────────────────
 class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
     def _send_cors_headers(self):
-        origin = self.headers.get("Origin") or "*"
+        origin = self.headers.get("Origin") or "https://crime-intel-platform.onslate.in"
         self.send_header("Access-Control-Allow-Origin", origin)
         self.send_header("Access-Control-Allow-Credentials", "true")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
