@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import api from "../lib/api.js";
+import { fetchMapCases } from "../lib/api.js";
 
 const SEVERITY_COLOR = {
   low: "#3FD6C1",
@@ -54,7 +54,7 @@ export default function MapView() {
     try {
       const params = {};
       if (status) params.status = status;
-      const { data } = await api.get("/cases/map", { params });
+      const data = await fetchMapCases(params);
       setCases(data);
     } catch (err) {
       setError("Could not load map data. Is the API running?");
