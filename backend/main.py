@@ -28,9 +28,9 @@ def _start_and_release_instant_listener():
     try:
         socketserver.TCPServer.allow_reuse_address = True
         httpd = socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler)
+        httpd.timeout = 0.2
         start_time = time.time()
-        while time.time() - start_time < 3.0:
-            httpd.timeout = 0.5
+        while time.time() - start_time < 2.0:
             httpd.handle_request()
         httpd.server_close()
         print("--> Released socket port for Uvicorn handover.")

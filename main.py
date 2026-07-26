@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import subprocess
-import threading
 import socketserver
 import http.server
 
@@ -10,7 +9,6 @@ print("--> Catalyst AppSail Bootstrapper Starting...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
-# 1. Start instant TCP listener to pass Catalyst health check for 3 seconds
 def _start_and_release_instant_listener():
     class HealthHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
@@ -30,9 +28,10 @@ def _start_and_release_instant_listener():
     try:
         socketserver.TCPServer.allow_reuse_address = True
         httpd = socketserver.TCPServer(("0.0.0.0", target_port), HealthHandler)
+        httpd.timeout = 0.2
         start_time = time.time()
-        while time.time() - start_time < 3.0:
-            httpd.timeout = 0.5
+        # Non-blocking listener loop for exactly 2 seconds
+        while time.time() - start_time < 2.0:
             httpd.handle_request()
         httpd.server_close()
         print("--> Released socket port for Uvicorn handover.")
@@ -41,7 +40,6 @@ def _start_and_release_instant_listener():
 
 _start_and_release_instant_listener()
 
-# 2. Ensure lightweight requirements are installed
 try:
     import uvicorn
     import fastapi
@@ -55,7 +53,6 @@ except ImportError:
     else:
         subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "fastapi", "uvicorn[standard]", "sqlalchemy", "pydantic", "pydantic-settings", "python-jose[cryptography]", "passlib", "python-multipart", "bcrypt<4.0.0", "email-validator", "slowapi"])
 
-# 3. Add paths
 dir_path = os.path.dirname(os.path.abspath(__file__))
 backend_path = os.path.join(dir_path, "backend")
 if os.path.exists(backend_path) and backend_path not in sys.path:
@@ -63,7 +60,6 @@ if os.path.exists(backend_path) and backend_path not in sys.path:
 if dir_path not in sys.path:
     sys.path.insert(0, dir_path)
 
-# 4. Launch full FastAPI app on port
 import uvicorn
 from app.main import app
 
