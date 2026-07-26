@@ -1,20 +1,7 @@
 import os
 import sys
-import subprocess
 
-# Auto-install requirements if missing
-try:
-    import uvicorn
-    import fastapi
-    import sqlalchemy
-except ImportError:
-    print("--> Auto-installing dependencies via pip...")
-    req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "requirements.txt")
-    if not os.path.exists(req_file):
-        req_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
-    if os.path.exists(req_file):
-        subprocess.run([sys.executable, "-m", "pip", "install", "--no-cache-dir", "-r", req_file], check=False)
-
+# Ensure backend directory and root are in import path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
