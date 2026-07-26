@@ -1,7 +1,6 @@
 """
 Standalone High-Performance Catalyst AppSail Server for CrimeIntel Platform.
-Uses Python Standard Library with Dynamic Origin Echoing for 100% W3C CORS Compliance.
-Supports all Frontend endpoints for Dashboard, Network, Cases, Offenders, Tasks, Admin, Audit, and Chat.
+Uses Python Standard Library with 100% Exact JSON Schemas for React Frontend Pages.
 """
 import os
 import sys
@@ -12,7 +11,7 @@ import http.server
 import socketserver
 from urllib.parse import parse_qs, urlparse
 
-print("--> Starting CrimeIntel AppSail Native Server with Dynamic CORS Origin Echoing...")
+print("--> Starting CrimeIntel AppSail Native Server with Perfect React Schemas...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
@@ -80,58 +79,76 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
         if path in ("", "/health", "/api/health"):
             return self._send_json({"status": "ok", "message": "CrimeIntel Platform Online", "port": target_port})
 
-        # Dashboard Stats & Overview
+        # Dashboard Stats (/api/dashboard/stats & /api/dashboard/overview)
         if path in ("/api/dashboard/stats", "/api/dashboard/overview"):
             return self._send_json({
-                "status": "success",
-                "summary": {
-                    "total_cases": 142,
-                    "active_investigations": 38,
-                    "critical_severity": 14,
-                    "solved_rate": 76.4,
-                    "tracked_offenders": 89,
-                    "syndicates_detected": 6
-                },
                 "total_cases": 142,
-                "active_investigations": 38,
-                "critical_severity": 14,
-                "solved_rate": 76.4,
-                "tracked_offenders": 89,
-                "syndicates_detected": 6,
-                "recent_activities": [
-                    {"id": 1, "text": "New FIR logged: CASE-2026-981 (Cyber Fraud)", "timestamp": "10 mins ago", "type": "FIR"},
-                    {"id": 2, "text": "Offender OFF-402 linked to Patna Syndicate", "timestamp": "25 mins ago", "type": "LINK"},
-                    {"id": 3, "text": "AI Risk Score updated for Case #CASE-2026-880", "timestamp": "1 hour ago", "type": "AI"}
+                "open_cases": 38,
+                "under_review_cases": 14,
+                "closed_cases": 90,
+                "crime_type_distribution": [
+                    {"crime_type": "Cybercrime", "count": 42},
+                    {"crime_type": "Robbery", "count": 28},
+                    {"crime_type": "Fraud", "count": 22},
+                    {"crime_type": "Extortion", "count": 18},
+                    {"crime_type": "Narcotics", "count": 14},
+                    {"crime_type": "Other", "count": 18}
                 ],
-                "district_stats": [
+                "district_summary": [
                     {"district": "Patna", "count": 42},
                     {"district": "Gaya", "count": 28},
                     {"district": "Muzaffarpur", "count": 22},
                     {"district": "Bhagalpur", "count": 18}
+                ],
+                "recent_alerts": [
+                    {
+                        "id": "c1",
+                        "case_id": "CASE-2026-901",
+                        "title": "Bank Fraud Scam & Cyber Hijack",
+                        "district": "Patna",
+                        "severity": "critical"
+                    },
+                    {
+                        "id": "c2",
+                        "case_id": "CASE-2026-902",
+                        "title": "Highway Cargo Hijack",
+                        "district": "Gaya",
+                        "severity": "high"
+                    }
                 ]
             })
 
         # Dashboard Predictions
         if path == "/api/dashboard/predictions":
             return self._send_json({
-                "status": "success",
-                "predictions": [
-                    {"district": "Patna", "predicted_risk": "HIGH", "trend": "+12%"},
-                    {"district": "Gaya", "predicted_risk": "MEDIUM", "trend": "-4%"}
+                "alerts": [
+                    {
+                        "district": "Patna",
+                        "recent_30d": 42,
+                        "prior_30d": 30,
+                        "change_pct": 40.0,
+                        "trend": "rising"
+                    },
+                    {
+                        "district": "Gaya",
+                        "recent_30d": 28,
+                        "prior_30d": 20,
+                        "change_pct": 40.0,
+                        "trend": "rising"
+                    }
                 ]
             })
 
         # Network Graph & Groups
         if path in ("/api/network/graph", "/api/network", "/api/network/groups"):
             return self._send_json({
-                "status": "success",
                 "nodes": [
-                    {"id": "c1", "label": "CASE-2026-901", "type": "case", "val": 15},
-                    {"id": "c2", "label": "CASE-2026-902", "type": "case", "val": 15},
-                    {"id": "p1", "label": "Rajesh Kumar (Alias: Raju)", "type": "person", "val": 20},
-                    {"id": "p2", "label": "Amit Shah (Alias: Snake)", "type": "person", "val": 18},
-                    {"id": "a1", "label": "HDFC-88912301", "type": "account", "val": 10},
-                    {"id": "ph1", "label": "+91-9876543210", "type": "phone", "val": 8}
+                    {"id": "c1", "name": "CASE-2026-901", "type": "case", "val": 15},
+                    {"id": "c2", "name": "CASE-2026-902", "type": "case", "val": 15},
+                    {"id": "p1", "name": "Rajesh Kumar", "type": "person", "val": 20},
+                    {"id": "p2", "name": "Amit Singh", "type": "person", "val": 18},
+                    {"id": "a1", "name": "HDFC-88912301", "type": "account", "val": 10},
+                    {"id": "ph1", "name": "+91-9876543210", "type": "phone", "val": 8}
                 ],
                 "links": [
                     {"source": "p1", "target": "c1", "label": "Prime Accused"},
@@ -141,18 +158,18 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
 
-        # Cases & Search
+        # Cases & Search (React expects { total: N, results: [...] } or [...])
         if path in ("/api/cases", "/api/cases/search"):
-            return self._send_json([
+            cases_list = [
                 {
                     "id": "CASE-2026-901",
                     "case_id": "CASE-2026-901",
                     "title": "Bank Fraud Scam & Cyber Hijack",
-                    "category": "Cybercrime",
+                    "crime_type": "Cybercrime",
                     "district": "Patna",
                     "police_station": "Kotwali",
-                    "status": "OPEN",
-                    "gravity": "CRITICAL",
+                    "status": "open",
+                    "severity": "critical",
                     "incident_date": "2026-03-15",
                     "summary": "Phishing call targeted senior citizen resulting in Rs 45 Lakh theft."
                 },
@@ -160,40 +177,39 @@ class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
                     "id": "CASE-2026-902",
                     "case_id": "CASE-2026-902",
                     "title": "Highway Cargo Hijack",
-                    "category": "Robbery",
+                    "crime_type": "Robbery",
                     "district": "Gaya",
                     "police_station": "Civil Lines",
-                    "status": "INVESTIGATING",
-                    "gravity": "HIGH",
+                    "status": "under_review",
+                    "severity": "high",
                     "incident_date": "2026-03-18",
                     "summary": "Armed hijack of electronics freight container on NH-83."
                 }
-            ])
+            ]
+            return self._send_json({"total": len(cases_list), "results": cases_list})
 
         # Offenders & Search
         if path in ("/api/offenders", "/api/offenders/search"):
             return self._send_json([
                 {
-                    "id": "OFF-401",
-                    "offender_id": "OFF-401",
-                    "full_name": "Rajesh Kumar",
-                    "aliases": "Raju Don",
-                    "gender": "MALE",
-                    "age": 34,
-                    "gang_affiliation": "Patna Cyber Syndicate",
+                    "person_id": "OFF-401",
+                    "name": "Rajesh Kumar (Alias: Raju Don)",
+                    "phone_number": "+91-9876543210",
+                    "case_count": 5,
+                    "mo_tags": ["Phishing", "Crypto Laundering"],
+                    "last_active": "2026-03-24",
                     "risk_score": 88,
-                    "status": "WANTED"
+                    "risk_category": "high"
                 },
                 {
-                    "id": "OFF-402",
-                    "offender_id": "OFF-402",
-                    "full_name": "Amit Singh",
-                    "aliases": "Snake",
-                    "gender": "MALE",
-                    "age": 29,
-                    "gang_affiliation": "Gaya Highway Network",
-                    "risk_score": 92,
-                    "status": "IN_CUSTODY"
+                    "person_id": "OFF-402",
+                    "name": "Amit Singh (Alias: Snake)",
+                    "phone_number": "+91-9123456789",
+                    "case_count": 8,
+                    "mo_tags": ["Highway Robbery", "Armed Assault"],
+                    "last_active": "2026-03-25",
+                    "risk_score": 94,
+                    "risk_category": "critical"
                 }
             ])
 
