@@ -1,6 +1,6 @@
 """
 Standalone High-Performance Catalyst AppSail Server for CrimeIntel Platform.
-Uses Python Standard Library with 100% CORS headers on ALL HTTP methods (GET, POST, OPTIONS, PATCH, DELETE, PUT).
+Uses Python Standard Library with Dynamic Origin Echoing for 100% W3C CORS Compliance.
 Supports all Frontend endpoints for Dashboard, Network, Cases, Offenders, Tasks, Admin, Audit, and Chat.
 """
 import os
@@ -12,7 +12,7 @@ import http.server
 import socketserver
 from urllib.parse import parse_qs, urlparse
 
-print("--> Starting CrimeIntel AppSail Native Server with Full CORS...")
+print("--> Starting CrimeIntel AppSail Native Server with Dynamic CORS Origin Echoing...")
 
 target_port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT") or os.getenv("PORT") or "9000")
 
@@ -49,22 +49,25 @@ except Exception as e:
 
 # ── CORS & HTTP Request Handler ───────────────────────────────────────────────
 class AppSailRequestHandler(http.server.BaseHTTPRequestHandler):
+    def _send_cors_headers(self):
+        origin = self.headers.get("Origin") or "*"
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
+
     def _send_json(self, data, status_code=200):
         body = json.dumps(data).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
+        self._send_cors_headers()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
+        self.send_response(204)
+        self._send_cors_headers()
         self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("Content-Length", "0")
         self.end_headers()
