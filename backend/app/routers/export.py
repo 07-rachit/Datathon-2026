@@ -1,3 +1,9 @@
+\"""
+Case PDF Export endpoints.
+
+Generates official investigative PDF reports for court submission or briefing,
+including case details, evidence list, suspect profiles, and timeline events.
+\"""
 import io
 import json
 from datetime import datetime
