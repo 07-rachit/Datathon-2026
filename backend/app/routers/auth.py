@@ -1,3 +1,9 @@
+\"""
+Authentication endpoints.
+
+Handles user signup (restricted to viewer/investigator roles), JWT login,
+token refresh, and the /me endpoint for current user profile retrieval.
+\"""
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
