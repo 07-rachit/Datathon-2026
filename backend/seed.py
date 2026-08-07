@@ -12,7 +12,8 @@ from app.database import SessionLocal, Base, engine
 from app import models, auth, schemas, rag
 
 # Re-create tables cleanly for idempotent demo state
-Base.metadata.drop_all(bind=engine)
+if engine.name == "sqlite":
+    Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()

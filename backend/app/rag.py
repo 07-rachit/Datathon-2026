@@ -46,35 +46,33 @@ def build_index(db: Session):
     cases = (
         db.query(models.Case)
         .options(
-            joinedload(models.Case.fir),
-            joinedload(models.Case.accused_list).joinedload(models.Accused.offender),
-            joinedload(models.Case.victim_list),
-            joinedload(models.Case.witness_list),
-            joinedload(models.Case.evidence_list),
+            joinedload(models.Case.fir_details),
+            joinedload(models.Case.persons),
+            joinedload(models.Case.evidence),
         )
         .all()
     )
 
     new_chunks: List[Chunk] = []
     for c in cases:
-        fir_no = c.fir.fir_number if c.fir else ""
-        overview_text = f"Case {c.case_id} ({c.title}): Category {c.category}, Gravity {c.gravity}. Status {c.status}. Location {c.district}, {c.police_station}. FIR: {fir_no}. Summary: {c.summary or ''} MO: {c.modus_operandi or ''}"
+        fir_no = c.fir_details.crime_no if getattr(c, "fir_details", None) else ""
+        overview_text = (
+            f"Case {c.case_id} ({c.title}): Crime {c.crime_type}, Severity {c.severity}. "
+            f"Status {c.status}. District {c.district}, Station {c.station_name}. "
+            f"FIR: {fir_no}. Summary: {c.summary or ''}"
+        )
         new_chunks.append(Chunk(f"{c.case_id}_overview", c.case_id, c.case_id, "overview", overview_text))
 
-        people = []
-        for acc in c.accused_list or []:
-            name = acc.offender.full_name if acc.offender else acc.name
-            people.append(f"Accused {name} (role: {acc.role_in_crime or ''})")
-        for vic in c.victim_list or []:
-            people.append(f"Victim {vic.name}")
-        for wit in c.witness_list or []:
-            people.append(f"Witness {wit.name}")
-        for ev in c.evidence_list or []:
-            people.append(f"Evidence {ev.item_type}: {ev.description or ''}")
+        entities = []
+        for p in getattr(c, "persons", []) or []:
+            role = p.role_in_case or "person"
+            entities.append(f"{role.capitalize()} {p.name} (notes: {p.notes or ''}, mo: {p.mo_tags or ''})")
+        for ev in getattr(c, "evidence", []) or []:
+            entities.append(f"Evidence {ev.item_type}: {ev.description or ''}")
 
-        if people:
-            people_text = f"Case {c.case_id} Entities & Evidence: " + "; ".join(people)
-            new_chunks.append(Chunk(f"{c.case_id}_people", c.case_id, c.case_id, "people_evidence", people_text))
+        if entities:
+            entities_text = f"Case {c.case_id} Entities & Evidence: " + "; ".join(entities)
+            new_chunks.append(Chunk(f"{c.case_id}_entities", c.case_id, c.case_id, "people_evidence", entities_text))
 
     if not new_chunks:
         return
@@ -86,6 +84,8 @@ def build_index(db: Session):
         _chunks = new_chunks
         _vectorizer = vec
         _matrix = mat
+
+    return len(new_chunks)
 
 
 def retrieve(query: str, top_k: int = 3) -> List[Chunk]:
