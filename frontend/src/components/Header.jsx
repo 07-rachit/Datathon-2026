@@ -13,6 +13,7 @@ const PATH_TITLES = {
   "/import": "BULK CASE IMPORT",
   "/offenders": "OFFENDER PROFILES",
   "/insights": "SOCIO-DEMOGRAPHIC INSIGHTS",
+  "/citizen-reports": "CITIZEN CRIME REPORTS",
   "/admin": "USER ADMINISTRATION",
 };
 
