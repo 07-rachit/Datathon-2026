@@ -55,6 +55,7 @@ function OffenderDrawer({ personId, onClose }) {
 
         {profile && (
           <div className="space-y-6 flex-1">
+            {/* Safe defaults */}
             {/* Risk Summary Header */}
             <div className="bg-panel2 border border-line rounded-lg p-5">
               <div className="flex items-center justify-between mb-3">
@@ -66,6 +67,7 @@ function OffenderDrawer({ personId, onClose }) {
               </div>
 
               {/* Score Breakdown Bar */}
+              {profile.risk_breakdown && (
               <div className="mt-4 pt-3 border-t border-line/60">
                 <p className="text-muted text-xs font-mono uppercase mb-2">Score Components</p>
                 <div className="space-y-1.5 text-xs font-mono">
@@ -91,6 +93,7 @@ function OffenderDrawer({ personId, onClose }) {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             {/* Non-bias Guarantee Notice */}
@@ -102,10 +105,10 @@ function OffenderDrawer({ personId, onClose }) {
             <div>
               <h4 className="text-ink font-display text-base mb-2">Identified Modus Operandi (MO) Tags</h4>
               <div className="flex flex-wrap gap-1.5">
-                {profile.mo_tags.length === 0 && (
+                {(!profile.mo_tags || profile.mo_tags.length === 0) && (
                   <p className="text-muted text-xs font-mono">No specific MO tags recorded.</p>
                 )}
-                {profile.mo_tags.map((tag, i) => (
+                {(profile.mo_tags || []).map((tag, i) => (
                   <span key={i} className="px-2.5 py-1 rounded text-xs font-mono bg-panel2 border border-amber/40 text-amber">
                     {tag}
                   </span>
@@ -116,10 +119,13 @@ function OffenderDrawer({ personId, onClose }) {
             {/* Linked Cases Timeline */}
             <div>
               <h4 className="text-ink font-display text-base mb-3">
-                Linked Case Records ({profile.linked_cases.length})
+                Linked Case Records ({(profile.linked_cases || []).length})
               </h4>
               <div className="space-y-2">
-                {profile.linked_cases.map((c) => (
+                {(profile.linked_cases || []).length === 0 && (
+                  <p className="text-muted text-xs font-mono">No linked case records found.</p>
+                )}
+                {(profile.linked_cases || []).map((c) => (
                   <Link
                     key={c.id}
                     to={`/cases/${c.id}`}
@@ -262,7 +268,7 @@ export default function Offenders() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
-                    {o.mo_tags.map((t, idx) => (
+                    {(o.mo_tags || []).map((t, idx) => (
                       <span key={idx} className="text-[10px] font-mono px-2 py-0.5 rounded bg-panel2 text-amber border border-amber/30">
                         {t}
                       </span>
