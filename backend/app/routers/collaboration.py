@@ -1,3 +1,10 @@
+\"""
+Collaboration endpoints for case teamwork.
+
+Implements comments, case assignments, task management (create/update/status),
+and My Work views. All operations are RBAC-enforced with role-based
+permission checks and real-time notification triggers.
+\"""
 from datetime import datetime
 from typing import List, Optional
 
