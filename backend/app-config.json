@@ -2,6 +2,7 @@
   "command": "python3 main.py",
   "build_path": ".",
   "stack": "python_3_11",
+  "port": 9000,
   "env_variables": {
     "JWT_SECRET_KEY": "change-me-in-production-secret-key-12345",
     "DATABASE_URL": "sqlite:////tmp/crime_intel.db",
