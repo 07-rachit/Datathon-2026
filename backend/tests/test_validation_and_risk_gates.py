@@ -149,7 +149,7 @@ def test_risk_gate_admin_self_deactivation_blocked(client, admin_headers, admin_
     assert res.status_code == 400
     data = res.json()
     assert data["error"]["code"] == "BUSINESS_RULE_ERROR"
-    assert "Self-deactivation" in data["error"]["message"]
+    assert "cannot deactivate" in data["error"]["message"].lower()
 
 
 def test_risk_gate_invalid_task_status_transition(client, db_session, investigator_headers):
