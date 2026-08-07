@@ -1,3 +1,9 @@
+\"""
+Dashboard statistics endpoint.
+
+Returns aggregated case counts, severity breakdowns, district summaries,
+and recent high-severity alerts for the main dashboard view.
+\"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
