@@ -53,6 +53,15 @@ async def lifespan(app: FastAPI):
                 db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
                 db.commit()
                 print("--> Seeded default demo RBAC users (Admin@123).")
+
+            # Check if cases need initial seeding
+            if db.query(models.Case).first() is None:
+                try:
+                    from seed import seed_all
+                    seed_all(db)
+                    print("--> Seeded initial cases & intelligence data.")
+                except Exception as s_err:
+                    print(f"--> Auto-seed cases notice: {s_err}")
         except Exception as seed_err:
             print(f"--> Demo user seed notice: {seed_err}")
         finally:
