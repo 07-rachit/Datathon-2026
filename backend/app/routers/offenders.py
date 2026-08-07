@@ -124,8 +124,8 @@ def list_offenders(
     results = []
 
     for key, p_group in clusters.items():
-        # A cluster qualifies if: 2+ linked cases OR flagged offender OR role is suspect in 1+ case
-        suspect_cases = [p for p in p_group if (p.role_in_case or "").lower() == "suspect" or p.is_flagged_offender]
+        # A cluster qualifies if: 2+ linked cases OR flagged offender OR role is suspect/accused in 1+ case
+        suspect_cases = [p for p in p_group if (p.role_in_case or "").lower() in ["suspect", "accused"] or p.is_flagged_offender]
         if len(p_group) >= 2 or len(suspect_cases) >= 1:
             primary = p_group[0]
             total_score, category, breakdown = _calculate_offender_score(p_group, all_persons)
