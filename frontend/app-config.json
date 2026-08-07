@@ -1,0 +1,6 @@
+{
+  "framework": "react-vite",
+  "build_path": "dist",
+  "command": "npm run build",
+  "install_command": "npm install"
+}

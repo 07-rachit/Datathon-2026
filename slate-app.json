@@ -1,0 +1,9 @@
+{
+  "name": "crime-intel-platform",
+  "framework": "react-vite",
+  "command": {
+    "install": "npm install",
+    "build": "npm run build"
+  },
+  "output_directory": "frontend/dist"
+}
