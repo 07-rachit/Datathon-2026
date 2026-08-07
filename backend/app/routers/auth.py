@@ -54,7 +54,28 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    email = form_data.username.strip().lower()
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    # Auto-provision demo account if querying a default demo user and not found
+    if not user and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local"]:
+        role_map = {
+            "admin@crimeintel.local": (models.RoleEnum.admin, "Admin User (DGP Office)"),
+            "analyst@crimeintel.local": (models.RoleEnum.analyst, "Lead Analyst Priya"),
+            "investigator@crimeintel.local": (models.RoleEnum.investigator, "Inspector K. Sharma"),
+            "viewer@crimeintel.local": (models.RoleEnum.viewer, "Junior Duty Officer"),
+        }
+        role, name = role_map[email]
+        user = models.User(
+            name=name,
+            email=email,
+            hashed_password=auth.hash_password(form_data.password),
+            role=role,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
