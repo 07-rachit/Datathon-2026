@@ -1,3 +1,9 @@
+\"""
+Audit trail endpoints.
+
+Provides a read-only log of all significant actions performed in the system,
+including case creation, updates, assignments, and authentication events.
+\"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
