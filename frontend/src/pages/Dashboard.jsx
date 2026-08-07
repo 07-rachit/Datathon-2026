@@ -54,8 +54,8 @@ export default function Dashboard() {
           <div className="grid grid-cols-4 gap-4 mb-8">
             <StatCard label="Total Cases" value={stats.total_cases} />
             <StatCard label="Open" value={stats.open_cases} accent="text-amber" />
-            <StatCard label="Under Review" value={stats.under_review_cases} accent="text-teal" />
-            <StatCard label="Closed" value={stats.closed_cases} accent="text-muted" />
+            <StatCard label="Critical" value={stats.critical_cases ?? stats.under_review_cases ?? 0} accent="text-crit" />
+            <StatCard label="Conv. Rate" value={`${stats.conviction_rate ?? 0}%`} accent="text-teal" />
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
@@ -79,6 +79,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
 
+          {stats.district_summary && stats.district_summary.length > 0 && (
             <div className="bg-panel border border-line rounded-md p-5">
               <p className="text-ink font-display text-xl mb-4">District Summary</p>
               <ResponsiveContainer width="100%" height={260}>
@@ -99,15 +100,14 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          )}
           </div>
 
+          {(stats.recent_alerts || stats.recent_cases || []).length > 0 && (
           <div className="bg-panel border border-line rounded-md p-5">
             <p className="text-ink font-display text-xl mb-4">Recent High-Severity Alerts</p>
             <div className="space-y-2">
-              {stats.recent_alerts.length === 0 && (
-                <p className="text-muted text-sm">No high-severity alerts right now.</p>
-              )}
-              {stats.recent_alerts.map((c) => (
+              {(stats.recent_alerts || stats.recent_cases || []).map((c) => (
                 <div
                   key={c.id}
                   className="flex items-center justify-between border border-line rounded px-4 py-3 bg-panel2"
@@ -132,8 +132,9 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+          )}
 
-          {predictions && predictions.alerts.filter((a) => a.trend === "rising").length > 0 && (
+          {predictions && Array.isArray(predictions.alerts) && predictions.alerts.filter((a) => a.trend === "rising").length > 0 && (
             <div className="bg-panel border border-line rounded-md p-5 mt-6">
               <p className="text-ink font-display text-xl mb-1">Predictive Alerts</p>
               <p className="text-muted text-xs font-mono mb-4">
