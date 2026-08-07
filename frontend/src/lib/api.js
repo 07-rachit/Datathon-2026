@@ -4,10 +4,9 @@ const getBaseURL = () => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // If running on custom domain/Catalyst slate without explicit env var
   if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    // Try Catalyst AppSail backend URL format or relative /api endpoint
-    return "https://backend-50044348119.development.catalystappsail.in/api";
+    // Dynamically fallback to AppSail URL or relative API endpoint
+    return "https://backend-54498000000013053.development.catalystappsail.in/api";
   }
   return "http://localhost:8000/api";
 };
