@@ -22,7 +22,13 @@ async def websocket_notifications(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        # Allow expired tokens for WebSocket (browser reconnects after server restart)
+        payload = jwt.decode(
+            token,
+            auth.SECRET_KEY,
+            algorithms=[auth.ALGORITHM],
+            options={"verify_exp": False},
+        )
         user_id: str = payload.get("sub")
         if not user_id:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
