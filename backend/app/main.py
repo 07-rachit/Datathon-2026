@@ -12,7 +12,7 @@ from app.database import Base, engine, SessionLocal
 from app.routers import (
     auth, cases, dashboard, export, chat, network,
     audit, offenders, analytics, finance, masters,
-    fir, collaboration, notifications, citizen_reports
+    fir, collaboration, notifications, citizen_reports, activity
 )
 from app.routers import admin as admin_router
 from app.routers import import_csv
@@ -24,6 +24,7 @@ from app.middleware import (
     http_exception_handler, rate_limit_exception_handler, db_exception_handler,
     global_exception_handler
 )
+from app.activity_logger import ActivityLoggingMiddleware
 
 
 @asynccontextmanager
@@ -84,6 +85,7 @@ app = FastAPI(title="Crime Intelligence Platform API", version="0.4.0", lifespan
 app.state.limiter = limiter
 
 # ── Middleware & Exception Handlers ──────────────────────────────────────────
+app.add_middleware(ActivityLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -108,6 +110,7 @@ app.include_router(export.router)
 app.include_router(chat.router)
 app.include_router(network.router)
 app.include_router(audit.router)
+app.include_router(activity.router)
 app.include_router(admin_router.router)
 app.include_router(import_csv.router)
 app.include_router(offenders.router)

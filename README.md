@@ -56,6 +56,16 @@ CrimeIntel enforces a centralized **Validation Layer** and **Risk Gates Protocol
 
 ---
 
+## 📜 Persistent Activity History System (Bounty 2)
+
+CrimeIntel integrates a centralized **Persistent Activity History Framework** (`activity_history` table):
+- **Automatic Interceptor Middleware (`ActivityLoggingMiddleware`):** Intercepts all mutating requests, AI generation queries, CSV imports, PDF exports, and user operations, capturing execution duration, user metadata, module names, entity IDs, and scrubbed payload parameters.
+- **REST APIs (`/api/activity-history`):** Multi-attribute search (`q`), filtering by `module`, `activity_type`, `status`, `user_id`, and `date_range`, with paginated responses and aggregate statistics.
+- **Immutability & Access Control:** Read access for all authorized personnel; deletion is strictly restricted to Super Admin users (`admin` role).
+- **Frontend Timeline & Inspector Module (`/activity`):** Interactive Ops-Room Activity History page with real-time stats cards, module filter toggles, dual Timeline/Table layout modes, and expandable JSON metadata inspector drawers.
+
+---
+
 ## ⚡ Real-Time In-App Alerts via WebSocket (Sprint 7)
 
 CrimeIntel delivers instant, multi-device live notifications over WebSockets (`/ws/notifications?token=<JWT>`):

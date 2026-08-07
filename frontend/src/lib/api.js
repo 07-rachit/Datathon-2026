@@ -389,6 +389,28 @@ export async function analyzeReportAI(reportId) {
   return data;
 }
 
+// ── Activity History APIs ──────────────────────────────────────────────────
+
+export async function fetchActivityHistory(params = {}) {
+  const { data } = await api.get("/activity-history", { params });
+  return data;
+}
+
+export async function fetchActivityDetail(activityId) {
+  const { data } = await api.get(`/activity-history/${activityId}`);
+  return data;
+}
+
+export async function fetchActivityStats() {
+  const { data } = await api.get("/activity-history/stats/summary");
+  return data;
+}
+
+export async function deleteActivityRecord(activityId) {
+  const { data } = await api.delete(`/activity-history/${activityId}`);
+  return data;
+}
+
 export default api;
 
 

@@ -836,5 +836,38 @@ class CitizenReportOut(BaseModel):
         from_attributes = True
 
 
+# ── Activity History Schemas ──────────────────────────────────────────────────
+
+class ActivityHistoryOut(BaseModel):
+    id: str
+    timestamp: datetime
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    activity_type: str
+    module: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    metadata_json: Optional[Any] = None
+    status: str
+    tags: List[str] = []
+    related_resources: List[Any] = []
+    execution_duration_ms: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ActivityHistoryListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[ActivityHistoryOut]
+
+
+
 
 

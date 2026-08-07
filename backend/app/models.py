@@ -504,6 +504,34 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ActivityHistory(Base):
+    """
+    Centralized Persistent Activity History model.
+    Stores comprehensive event logs for AI outputs, twin/case edits, agent runs,
+    intake validations, citizen report actions, tasks, and workflow decisions.
+    """
+    __tablename__ = "activity_history"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    user_name = Column(String, nullable=True)
+    user_role = Column(String, nullable=True)
+    activity_type = Column(String, nullable=False, index=True)
+    module = Column(String, nullable=False, index=True)
+    entity_type = Column(String, nullable=True, index=True)
+    entity_id = Column(String, nullable=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    status = Column(String, default="success", nullable=False, index=True)
+    tags = Column(Text, nullable=True)
+    related_resources = Column(Text, nullable=True)
+    execution_duration_ms = Column(Float, nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
 # ─── SPRINT 6: CASE COLLABORATION MODELS ─────────────────────────────────────
 
 class CaseComment(Base):
