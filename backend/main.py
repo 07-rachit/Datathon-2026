@@ -79,14 +79,15 @@ else:
 
         def do_GET(self):
             parsed = urlparse(self.path)
-            path = parsed.path.rstrip("/")
+            raw_path = parsed.path.rstrip("/")
+            path = raw_path[4:] if raw_path.startswith("/api") else raw_path
             
-            if path in ["", "/health", "/api/health"]:
+            if path in ["", "/health"]:
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({"status": "ok", "message": "CrimeIntel Platform API Online"}).encode())
                 return
 
-            if path == "/api/auth/me":
+            if path == "/auth/me":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "id": "usr-admin",
@@ -97,7 +98,7 @@ else:
                 }).encode())
                 return
 
-            if path == "/api/dashboard/stats":
+            if path == "/dashboard/stats":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "total_cases": 48,
@@ -120,7 +121,16 @@ else:
                 }).encode())
                 return
 
-            if path == "/api/cases":
+            if path == "/dashboard/predictions":
+                self._send_cors_headers(200)
+                self.wfile.write(json.dumps({
+                    "alerts": [
+                        {"district": "Patna", "crime_type": "Cyber Fraud", "trend": "rising", "risk_level": "high", "message": "15% increase in phishing reports in Patna Central area."}
+                    ]
+                }).encode())
+                return
+
+            if path == "/cases":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "total": 3,
@@ -134,7 +144,7 @@ else:
                 }).encode())
                 return
 
-            if path.startswith("/api/cases/"):
+            if path.startswith("/cases/"):
                 cid = path.split("/")[-1]
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
@@ -152,7 +162,7 @@ else:
                 }).encode())
                 return
 
-            if path == "/api/network/graph":
+            if path == "/network/graph":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "nodes": [
@@ -169,7 +179,7 @@ else:
                 }).encode())
                 return
 
-            if path == "/api/offenders/list":
+            if path == "/offenders/list":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "total": 2,
@@ -186,12 +196,12 @@ else:
 
         def do_POST(self):
             parsed = urlparse(self.path)
-            path = parsed.path.rstrip("/")
+            raw_path = parsed.path.rstrip("/")
+            path = raw_path[4:] if raw_path.startswith("/api") else raw_path
             content_length = int(self.headers.get('Content-Length', 0))
             body_bytes = self.rfile.read(content_length) if content_length > 0 else b""
             
-            if path in ["/api/auth/login", "/auth/login"]:
-                # Login handler accepting any credentials or default demo credentials
+            if path == "/auth/login":
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "access_token": "mock-jwt-token-production-appsail-session-2026",
@@ -206,7 +216,7 @@ else:
                 }).encode())
                 return
 
-            if path.startswith("/api/chat"):
+            if path.startswith("/chat"):
                 self._send_cors_headers(200)
                 self.wfile.write(json.dumps({
                     "response": "Intelligence search completed. Retrieved matching suspect records for Suresh 'Broker' Kumar (CR-2026-0101) and associated financial transaction trails.",
