@@ -29,9 +29,10 @@ jobs:
       - name: Run Pytest
         run: |
           cd backend
-          pytest tests/ -v
+          python -m pytest tests/ -v
         env:
           JWT_SECRET_KEY: ci-test-secret-key
+          PYTHONPATH: .
 
   check-frontend:
     name: Check Frontend Build
