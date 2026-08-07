@@ -17,6 +17,7 @@ graph TD
         Nginx["Nginx Reverse Proxy / Static Web Server"]
         Auth["FastAPI JWT Bearer Authentication"]
         RBAC["Role-Based Access Control (RBAC)\n(admin, analyst, investigator, viewer)"]
+        RiskGates["Intake Validation Layer & Pre-Execution Risk Gates\n(Idempotency, State Transitions, Data Bounds)"]
         RateLimit["Slowapi Rate Limiter"]
     end
 

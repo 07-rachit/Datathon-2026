@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from app.database import get_db
-from app import models, schemas, auth, rag
+from app import models, schemas, auth, rag, risk_gates
+from app.errors import ResourceNotFoundError
 from app.routers import fir as fir_router
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
@@ -256,9 +257,7 @@ async def create_case(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_roles("investigator", "admin")),
 ):
-    existing = db.query(models.Case).filter(models.Case.case_id == payload.case_id).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="A case with this case_id already exists")
+    risk_gates.check_case_creation_gate(db, payload, current_user)
 
     case = models.Case(**payload.model_dump())
     db.add(case)

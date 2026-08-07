@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app import models, schemas, auth
+from app import models, schemas, auth, risk_gates
+from app.errors import ResourceNotFoundError
 
 router = APIRouter(prefix="/api/citizen-reports", tags=["citizen-reports"])
 
@@ -65,6 +66,7 @@ def create_citizen_report(
     report_in: schemas.CitizenReportCreate,
     db: Session = Depends(get_db)
 ):
+    risk_gates.check_citizen_report_submission_gate(report_in)
     tracking_id = generate_tracking_id(db)
     incident_date = report_in.incident_date or datetime.utcnow()
 
@@ -156,9 +158,7 @@ def verify_citizen_report(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    report = db.query(models.CitizenReport).filter(models.CitizenReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Citizen report not found")
+    report = risk_gates.check_citizen_report_verification_gate(db, report_id, verify_in, current_user)
 
     if verify_in.action.lower() == "approve":
         report.status = "verified"

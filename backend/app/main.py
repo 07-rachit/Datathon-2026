@@ -3,7 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from slowapi.errors import RateLimitExceeded
 
 from app.database import Base, engine, SessionLocal
@@ -16,6 +18,12 @@ from app.routers import admin as admin_router
 from app.routers import import_csv
 from app import models, auth as app_auth
 from app.limiter import limiter
+from app.errors import AppException
+from app.middleware import (
+    RequestIDMiddleware, app_exception_handler, request_validation_exception_handler,
+    http_exception_handler, rate_limit_exception_handler, db_exception_handler,
+    global_exception_handler
+)
 
 
 @asynccontextmanager
@@ -74,9 +82,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Crime Intelligence Platform API", version="0.4.0", lifespan=lifespan)
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ── CORS ─────────────────────────────────────────────────────────────────────
+# ── Middleware & Exception Handlers ──────────────────────────────────────────
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -84,6 +92,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
+app.add_exception_handler(SQLAlchemyError, db_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router)

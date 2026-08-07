@@ -22,9 +22,31 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export function formatApiError(error) {
+  if (!error) return { message: "An unexpected error occurred.", details: [] };
+  if (error.response && error.response.data) {
+    const data = error.response.data;
+    if (data.error) {
+      return {
+        message: data.error.message || "An error occurred",
+        code: data.error.code || "ERROR",
+        statusCode: data.error.status_code || error.response.status,
+        details: Array.isArray(data.error.details) ? data.error.details : [],
+        requestId: data.error.request_id || "",
+      };
+    }
+    if (data.detail) {
+      const msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+      return { message: msg, statusCode: error.response.status, details: [] };
+    }
+  }
+  return { message: error.message || "Network error. Please check your connection.", details: [] };
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    error.formattedError = formatApiError(error);
     if (error.response && error.response.status === 401) {
       localStorage.removeItem("ci_token");
       localStorage.removeItem("ci_user");

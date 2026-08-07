@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.database import get_db
-from app import models, schemas, auth
+from app import models, schemas, auth, risk_gates
+from app.errors import ResourceNotFoundError, ValidationError, AuthorizationError
 
 router = APIRouter(prefix="/api", tags=["collaboration"])
 
@@ -185,17 +186,10 @@ async def create_case_assignment(
     current_user: models.User = Depends(auth.require_roles("admin", "analyst", "investigator")),
 ):
     case = _get_case_or_404(db, case_id)
-
-    # RBAC Enforcement: Investigators can only self-assign
     if current_user.role == models.RoleEnum.investigator and payload.assigned_to_user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Investigators can only self-claim cases"
-        )
+        raise AuthorizationError("Investigators can only self-claim cases")
 
-    target_user = db.query(models.User).filter(models.User.id == payload.assigned_to_user_id).first()
-    if not target_user:
-        raise HTTPException(status_code=404, detail="Target user to assign not found")
+    target_user = risk_gates.check_assignment_gate(db, case_id, payload.assigned_to_user_id, current_user)
 
     # Check if assignment exists
     existing = db.query(models.CaseAssignment).filter(
@@ -346,7 +340,9 @@ def update_case_task(
         models.CaseTask.case_id == case_id
     ).first()
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise ResourceNotFoundError("Task not found")
+
+    risk_gates.check_task_transition_gate(db, task, payload, current_user)
 
     # Status update permission check
     if payload.status and payload.status != task.status:

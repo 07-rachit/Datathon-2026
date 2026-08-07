@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app import models, schemas, auth
+from app import models, schemas, auth, risk_gates
 
 router = APIRouter(prefix="/api/cases", tags=["fir"])
 
@@ -24,9 +24,7 @@ def create_or_update_fir_details(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_roles("investigator", "admin")),
 ):
-    case = db.query(models.Case).filter(models.Case.id == case_id).first()
-    if not case:
-        raise HTTPException(status_code=404, detail="Case not found")
+    case = risk_gates.check_fir_details_gate(db, case_id, payload)
 
     existing = db.query(models.CaseFIRDetails).filter(models.CaseFIRDetails.case_id == case_id).first()
     

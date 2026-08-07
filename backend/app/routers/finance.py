@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from app.database import get_db
-from app import models, schemas, auth
+from app import models, schemas, auth, risk_gates
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
 
@@ -47,6 +47,7 @@ def create_transaction(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_roles("investigator", "admin")),
 ):
+    risk_gates.check_financial_transaction_gate(db, payload)
     tx = models.FinancialTransaction(**payload.model_dump())
     db.add(tx)
     db.commit()

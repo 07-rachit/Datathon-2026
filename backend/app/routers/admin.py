@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import models, schemas, auth
+from app import models, schemas, auth, risk_gates
+from app.errors import ResourceNotFoundError
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -30,9 +31,7 @@ def create_user(
     current_user: models.User = Depends(auth.require_roles("admin")),
 ):
     """Create a user with any role (admin only). Password must be ≥ 8 chars."""
-    existing = db.query(models.User).filter(models.User.email == payload.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="An account with this email already exists")
+    risk_gates.check_user_admin_gate(db, target_user_id=None, new_email=payload.email, is_active_change=None, current_user=current_user)
 
     user = models.User(
         name=payload.name,
@@ -63,9 +62,11 @@ def update_user(
     """Update a user's role, active status, or name (admin only)."""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.id == current_user.id and payload.is_active is False:
-        raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+        raise ResourceNotFoundError("User not found")
+
+    risk_gates.check_user_admin_gate(
+        db, target_user_id=user_id, new_email=None, is_active_change=payload.is_active, current_user=current_user
+    )
 
     changes = []
     if payload.role is not None:
@@ -98,9 +99,11 @@ def deactivate_user(
     """Soft-delete (deactivate) a user account (admin only). Does not delete DB row."""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.id == current_user.id:
-        raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+        raise ResourceNotFoundError("User not found")
+    
+    risk_gates.check_user_admin_gate(
+        db, target_user_id=user_id, new_email=None, is_active_change=False, current_user=current_user
+    )
 
     user.is_active = False
     log = models.AuditLog(
@@ -110,3 +113,4 @@ def deactivate_user(
     )
     db.add(log)
     db.commit()
+

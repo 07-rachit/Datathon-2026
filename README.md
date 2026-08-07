@@ -42,6 +42,20 @@ For full clustering thresholds and group risk formulas, see [GROUP_DETECTION.md]
 
 ---
 
+## 🛡️ Evidence Intake Validation & Risk Gates Protocol
+
+CrimeIntel enforces a centralized **Validation Layer** and **Risk Gates Protocol** before any business logic executes:
+- **Typed Exception Hierarchy (`app/errors.py`):** Standardized JSON error response format across `ValidationError` (422), `AuthenticationError` (401), `AuthorizationError` (403), `ResourceNotFoundError` (404), `ConflictError` (409), `BusinessRuleError` (400), `RateLimitError` (429), `DatabaseError` (500), and `InternalServerError` (500).
+- **Request Tracking & Logging (`app/middleware.py`, `app/logger.py`):** Automatic UUID `x-request-id` injection per request, structured log outputs, and automatic redaction of passwords, tokens, secrets, and statutory sensitive attributes (`caste_id`, `religion_id`).
+- **Pre-Execution Risk Gates (`app/risk_gates.py`):**
+  - *Auth & Role Authorization Gate:* Verifies session validity, active account status, and role permissions.
+  - *Entity Existence & Ownership Gate:* Verifies case, report, task, and account existence before updates.
+  - *Idempotency & Duplicate Action Gate:* Rejects duplicate case IDs, registered FIR crime numbers, duplicate report verifications, and existing case assignments.
+  - *State Transition Gate:* Validates task status progressions (`todo` $\rightarrow$ `in_progress` $\rightarrow$ `done`) and prevents re-reviewing already processed citizen reports.
+  - *Business Constraint & Safety Gate:* Rejects future `incident_date` timestamps, out-of-range lat/long coordinates, negative transaction amounts, self-transfers, and Super Admin self-deactivation.
+
+---
+
 ## ⚡ Real-Time In-App Alerts via WebSocket (Sprint 7)
 
 CrimeIntel delivers instant, multi-device live notifications over WebSockets (`/ws/notifications?token=<JWT>`):

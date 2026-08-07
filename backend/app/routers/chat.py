@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.database import get_db
-from app import models, schemas, auth, rag, llm, agent_loop, agent_tools
+from app import models, schemas, auth, rag, llm, agent_loop, agent_tools, risk_gates
 from app.limiter import limiter, RATE_CHAT
 
 
@@ -310,9 +310,7 @@ def confirm_agent_action(
     """
     User confirms a pending write action. Re-enforces RBAC using confirming user's role and checks 24h expiry.
     """
-    action = db.query(models.PendingAgentAction).filter(models.PendingAgentAction.id == action_id).first()
-    if not action:
-        raise HTTPException(status_code=404, detail="Pending action not found")
+    action = risk_gates.check_agent_action_gate(db, action_id, current_user)
 
     # Check 24-hour expiry
     if action.status == "pending" and action.created_at:
@@ -359,9 +357,7 @@ def cancel_agent_action(
     """
     User cancels a pending write action.
     """
-    action = db.query(models.PendingAgentAction).filter(models.PendingAgentAction.id == action_id).first()
-    if not action:
-        raise HTTPException(status_code=404, detail="Pending action not found")
+    action = risk_gates.check_agent_action_gate(db, action_id, current_user)
 
     # Check 24-hour expiry
     if action.status == "pending" and action.created_at:
