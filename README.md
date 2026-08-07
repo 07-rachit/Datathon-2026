@@ -164,15 +164,16 @@ npm run dev
 
 ## 🧪 Automated Testing
 
-### 🔍 Bounty 4: Tool & Agent Observability Dashboard
-- **Centralized Observability Engine:** `agent_runs` and `tool_calls` data models capturing run ID, parent run ID, user context, prompt, outputs, decisions, status, and latency breakdowns (`queue_time`, `processing_time`, `model_inference_time`, `tool_execution_time`).
-- **REST APIs (`/api/observability`):** Searchable, paginated list of agent runs (`/runs`), detail inspector (`/runs/{id}`), execution tree view (`/runs/{id}/tree`), performance summary stats (`/stats/summary`), and tool rankings (`/tools`).
-- **Operator Observability Matrix UI (`/observability`):** Ops dashboard with top KPI cards, live polling, status indicators, searchable execution table, tool performance telemetry, and a side drawer inspecting step-by-step tool invocations and downloadable trace logs.
-- **Sensitive Data Sanitization:** Automatic scrubbing of passwords, tokens, API keys, and sensitive statutory fields before persistence or display.
+### ⚙️ Bounty 5: Multi-Step Orchestration with Human Approval Gates
+- **Intelligent Workflow Engine:** Decomposes complex user requests into ordered multi-step execution plans (`workflows`, `workflow_steps`, `workflow_approvals` tables) with step risk classification (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+- **Human Approval Gate System:** Low and medium risk steps execute automatically. High and critical risk operations (financial account freezes, judicial arrest warrants, production data modification) automatically pause the workflow and generate a human approval request.
+- **Resumable Execution & Fault Tolerance:** Workflows persist state across server restarts and resume execution from the exact paused step upon human approval (`APPROVED`) without repeating completed steps. Rejection (`REJECTED`) terminates the workflow gracefully while preserving audit logs.
+- **Approval Center UI (`/workflows`):** Dashboard featuring workflow progress bars, step timeline inspection modal, and dedicated Human Approval Center with risk badges, expected impact details, proposed actions, and approval/rejection action buttons.
+- **REST APIs (`/api/workflows`):** Endpoints to create (`POST /api/workflows`), list (`GET /api/workflows`), inspect (`GET /api/workflows/{id}`), execute step (`POST /api/workflows/{id}/execute`), cancel (`POST /api/workflows/{id}/cancel`), list pending approvals (`GET /api/workflows/approvals/pending`), and submit decisions (`POST /api/workflows/approvals/{id}/decision`).
 
 ---
 
-Run the automated backend test suite (74 unit & integration tests):
+Run the automated backend test suite (79 unit & integration tests):
 ```bash
 cd backend
 python -m pytest tests/ -v

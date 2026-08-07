@@ -979,6 +979,99 @@ class AgentRunListResponse(BaseModel):
     results: List[AgentRunOut]
 
 
+# ── Multi-Step Workflow Schemas ─────────────────────────────────────────────
+
+class WorkflowCreate(BaseModel):
+    workflow_type: str
+    title: str
+    description: Optional[str] = None
+    input_payload: Optional[Any] = None
+
+
+class WorkflowStepOut(BaseModel):
+    id: str
+    workflow_id: str
+    step_number: int
+    step_name: str
+    step_type: str
+    assigned_agent: Optional[str] = None
+    assigned_tool: Optional[str] = None
+    risk_level: str
+    status: str
+    requires_approval: bool = False
+    input_params: Optional[Any] = None
+    output_result: Optional[Any] = None
+    error_details: Optional[Any] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    execution_duration_ms: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowApprovalOut(BaseModel):
+    id: str
+    workflow_id: str
+    step_id: str
+    requester_user_id: Optional[str] = None
+    approver_user_id: Optional[str] = None
+    approver_user_name: Optional[str] = None
+    status: str
+    risk_level: str
+    risk_explanation: Optional[str] = None
+    expected_impact: Optional[str] = None
+    affected_resources: Optional[str] = None
+    proposed_action: Optional[str] = None
+    comments: Optional[str] = None
+    created_at: datetime
+    decided_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowApprovalDecision(BaseModel):
+    decision: str
+    comments: Optional[str] = None
+
+
+class WorkflowOut(BaseModel):
+    id: str
+    workflow_type: str
+    title: str
+    description: Optional[str] = None
+    initiator_user_id: Optional[str] = None
+    initiator_user_name: Optional[str] = None
+    status: str
+    risk_level: str
+    current_step_index: int = 0
+    total_steps: int = 0
+    progress_pct: int = 0
+    input_payload: Optional[Any] = None
+    intermediate_results: Optional[Any] = None
+    final_output: Optional[Any] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    execution_duration_ms: Optional[float] = None
+    steps: List[WorkflowStepOut] = []
+    approvals: List[WorkflowApprovalOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[WorkflowOut]
+
+
+
 
 
 

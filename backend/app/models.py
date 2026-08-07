@@ -650,6 +650,109 @@ class ToolCall(Base):
     agent_run = relationship("AgentRun", back_populates="tool_calls")
 
 
+# ─── MULTI-STEP WORKFLOW & APPROVAL MODELS ────────────────────────────────────
+
+class Workflow(Base):
+    """
+    Multi-Step Orchestration Workflow Model.
+    Tracks overall execution state, step progress, risk level, and human approval gates.
+    """
+    __tablename__ = "workflows"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    workflow_type = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    
+    initiator_user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    initiator_user_name = Column(String, nullable=True)
+    
+    status = Column(String, default="PLANNED", nullable=False, index=True)
+    risk_level = Column(String, default="LOW", nullable=False, index=True)
+    
+    current_step_index = Column(Integer, default=0, nullable=False)
+    total_steps = Column(Integer, default=0, nullable=False)
+    progress_pct = Column(Integer, default=0, nullable=False)
+    
+    input_payload_json = Column(Text, nullable=True)
+    intermediate_results_json = Column(Text, nullable=True)
+    final_output_json = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    failed_at = Column(DateTime, nullable=True)
+    execution_duration_ms = Column(Float, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+
+    initiator = relationship("User", foreign_keys=[initiator_user_id])
+    steps = relationship("WorkflowStep", back_populates="workflow", order_by="WorkflowStep.step_number", cascade="all, delete-orphan")
+    approvals = relationship("WorkflowApproval", back_populates="workflow", cascade="all, delete-orphan")
+
+
+class WorkflowStep(Base):
+    """
+    Individual step definition within a Multi-Step Workflow.
+    """
+    __tablename__ = "workflow_steps"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)
+    step_name = Column(String, nullable=False)
+    step_type = Column(String, nullable=False)
+    
+    assigned_agent = Column(String, nullable=True)
+    assigned_tool = Column(String, nullable=True)
+    risk_level = Column(String, default="LOW", nullable=False, index=True)
+    
+    status = Column(String, default="PENDING", nullable=False, index=True)
+    requires_approval = Column(Boolean, default=False, nullable=False)
+    
+    input_params_json = Column(Text, nullable=True)
+    output_result_json = Column(Text, nullable=True)
+    error_details = Column(Text, nullable=True)
+    
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    execution_duration_ms = Column(Float, nullable=True)
+
+    workflow = relationship("Workflow", back_populates="steps")
+    approval_request = relationship("WorkflowApproval", back_populates="step", uselist=False, cascade="all, delete-orphan")
+
+
+class WorkflowApproval(Base):
+    """
+    Human Approval Request Record for High/Critical Risk Workflow Steps.
+    """
+    __tablename__ = "workflow_approvals"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False, index=True)
+    step_id = Column(String, ForeignKey("workflow_steps.id"), nullable=False, index=True)
+    
+    requester_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    approver_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    approver_user_name = Column(String, nullable=True)
+    
+    status = Column(String, default="PENDING", nullable=False, index=True)
+    risk_level = Column(String, default="HIGH", nullable=False)
+    
+    risk_explanation = Column(Text, nullable=True)
+    expected_impact = Column(Text, nullable=True)
+    affected_resources = Column(Text, nullable=True)
+    proposed_action = Column(Text, nullable=True)
+    comments = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    decided_at = Column(DateTime, nullable=True)
+
+    workflow = relationship("Workflow", back_populates="approvals")
+    step = relationship("WorkflowStep", back_populates="approval_request")
+    requester = relationship("User", foreign_keys=[requester_user_id])
+    approver = relationship("User", foreign_keys=[approver_user_id])
+
+
 # ─── SPRINT 6: CASE COLLABORATION MODELS ─────────────────────────────────────
 
 class CaseComment(Base):

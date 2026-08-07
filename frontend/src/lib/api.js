@@ -475,6 +475,48 @@ export async function fetchToolStats() {
   return data;
 }
 
+// ── Multi-Step Workflows & Approval Gates APIs ──────────────────────────────
+
+export async function createWorkflow(payload) {
+  const { data } = await api.post("/workflows", payload);
+  return data;
+}
+
+export async function fetchWorkflows(params = {}) {
+  const { data } = await api.get("/workflows", { params });
+  return data;
+}
+
+export async function fetchWorkflowDetail(workflowId) {
+  const { data } = await api.get(`/workflows/${workflowId}`);
+  return data;
+}
+
+export async function executeWorkflow(workflowId) {
+  const { data } = await api.post(`/workflows/${workflowId}/execute`);
+  return data;
+}
+
+export async function cancelWorkflow(workflowId) {
+  const { data } = await api.post(`/workflows/${workflowId}/cancel`);
+  return data;
+}
+
+export async function fetchPendingApprovals() {
+  const { data } = await api.get("/workflows/approvals/pending");
+  return data;
+}
+
+export async function submitApprovalDecision(approvalId, payload) {
+  const { data } = await api.post(`/workflows/approvals/${approvalId}/decision`, payload);
+  return data;
+}
+
+export async function fetchWorkflowStats() {
+  const { data } = await api.get("/workflows/stats/summary");
+  return data;
+}
+
 export default api;
 
 
