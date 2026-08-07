@@ -111,6 +111,14 @@ def retrieve(query: str, top_k: int = 3) -> List[Chunk]:
         return [chunk for chunk, score in ranked[:top_k] if score > 0.05]
 
 
+def get_case_chunks(case_id: str) -> List[Chunk]:
+    """Return all chunks belonging to a given case_id or case_code."""
+    with _lock:
+        if not _chunks:
+            return []
+        return [c for c in _chunks if c.case_id == case_id or c.case_code == case_id]
+
+
 def similar_to_case(case_id: str, top_k: int = 4):
     """Find other cases textually similar to a given case."""
     with _lock:
