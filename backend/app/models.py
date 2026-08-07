@@ -581,6 +581,75 @@ class BackgroundJob(Base):
     user = relationship("User", foreign_keys=[user_id])
 
 
+class AgentRun(Base):
+    """
+    Centralized Observability Model for AI Agent Executions.
+    Tracks run lifecycle, latency breakdown, decision outputs, prompts, and tokens.
+    """
+    __tablename__ = "agent_runs"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    parent_run_id = Column(String, ForeignKey("agent_runs.id"), nullable=True, index=True)
+    session_id = Column(String, nullable=True, index=True)
+    conversation_id = Column(String, nullable=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    user_name = Column(String, nullable=True)
+    user_role = Column(String, nullable=True)
+    
+    agent_name = Column(String, nullable=False, index=True)
+    execution_type = Column(String, default="agent_run", nullable=False, index=True)
+    trigger_source = Column(String, default="user_chat", nullable=False, index=True)
+    
+    input_prompt = Column(Text, nullable=True)
+    output_summary = Column(Text, nullable=True)
+    status = Column(String, default="RUNNING", nullable=False, index=True)
+    decision = Column(String, nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+    total_latency_ms = Column(Float, nullable=True)
+    queue_time_ms = Column(Float, nullable=True)
+    processing_time_ms = Column(Float, nullable=True)
+    model_inference_time_ms = Column(Float, nullable=True)
+    tool_execution_time_ms = Column(Float, nullable=True)
+    retry_count = Column(Integer, default=0)
+    tokens_used = Column(Integer, nullable=True)
+    model_name = Column(String, nullable=True)
+    
+    logs_json = Column(Text, nullable=True)
+    error_details = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    tool_calls = relationship("ToolCall", back_populates="agent_run", cascade="all, delete-orphan")
+
+
+class ToolCall(Base):
+    """
+    Detailed Observability Record for Individual Tool Invocations.
+    Linked to parent AgentRun with latency metrics, parameters, and results.
+    """
+    __tablename__ = "tool_calls"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    run_id = Column(String, ForeignKey("agent_runs.id"), nullable=False, index=True)
+    tool_name = Column(String, nullable=False, index=True)
+    
+    input_params_json = Column(Text, nullable=True)
+    output_result_json = Column(Text, nullable=True)
+    status = Column(String, default="SUCCESS", nullable=False, index=True)
+    duration_ms = Column(Float, nullable=True)
+    
+    started_at = Column(DateTime, default=datetime.utcnow, index=True)
+    completed_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    agent_run = relationship("AgentRun", back_populates="tool_calls")
+
+
 # ─── SPRINT 6: CASE COLLABORATION MODELS ─────────────────────────────────────
 
 class CaseComment(Base):

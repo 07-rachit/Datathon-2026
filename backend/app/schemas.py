@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 
 
 from app.models import RoleEnum, CaseStatus, Severity
@@ -916,6 +916,68 @@ class BackgroundJobListResponse(BaseModel):
     page_size: int
     total_pages: int
     results: List[BackgroundJobOut]
+
+
+# ── Agent & Tool Observability Schemas ─────────────────────────────────────
+
+class ToolCallOut(BaseModel):
+    id: str
+    run_id: str
+    tool_name: str
+    input_params: Optional[Any] = None
+    output_result: Optional[Any] = None
+    status: str
+    duration_ms: Optional[float] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AgentRunOut(BaseModel):
+    id: str
+    parent_run_id: Optional[str] = None
+    session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    agent_name: str
+    execution_type: str
+    trigger_source: str
+    input_prompt: Optional[str] = None
+    output_summary: Optional[str] = None
+    status: str
+    decision: Optional[str] = None
+    confidence_score: Optional[float] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    total_latency_ms: Optional[float] = None
+    queue_time_ms: Optional[float] = None
+    processing_time_ms: Optional[float] = None
+    model_inference_time_ms: Optional[float] = None
+    tool_execution_time_ms: Optional[float] = None
+    retry_count: int = 0
+    tokens_used: Optional[int] = None
+    model_name: Optional[str] = None
+    logs: List[str] = []
+    error_details: Optional[Any] = None
+    metadata: Optional[Any] = None
+    tool_calls: List[ToolCallOut] = []
+
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+
+
+class AgentRunListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[AgentRunOut]
+
 
 
 

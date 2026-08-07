@@ -2,12 +2,14 @@ import json
 import logging
 import os
 import re
+import time
 import requests
 from typing import List, Dict, Any, Tuple, Optional
 from sqlalchemy.orm import Session
 
 from app import models, llm
 from app.agent_tools import ALL_TOOLS, READ_TOOLS, WRITE_TOOLS, execute_read_tool, describe_write_action, sanitize_tool_output
+from app.observability import start_agent_run, log_tool_call, finish_agent_run
 
 logger = logging.getLogger("crimeintel.agent_loop")
 
@@ -22,19 +24,51 @@ def run_agent_loop(
     session_id: Optional[str] = None,
 ) -> Tuple[str, Optional[models.PendingAgentAction], List[str]]:
     """
-    Executes a multi-step tool-use agent loop:
-    1. Automatically executes read tools up to MAX_AGENT_STEPS.
-    2. Intercepts write tool requests, generates a PendingAgentAction, and pauses for human confirmation.
-    3. Records every tool call into reasoning_steps and audit_logs.
+    Executes a multi-step tool-use agent loop with full Observability instrumentation.
     """
     reasoning_steps: List[str] = []
+    t_start = time.perf_counter()
 
-    # Check if Anthropic API key is configured
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if api_key:
-        return _run_anthropic_tool_loop(db, current_user, question, context_blocks, session_id, api_key, reasoning_steps)
-    else:
-        return _run_local_fallback_agent_loop(db, current_user, question, context_blocks, session_id, reasoning_steps)
+    run = start_agent_run(
+        db=db,
+        agent_name="CrimeIntelAssistant",
+        user_id=current_user.id,
+        user_name=current_user.name,
+        user_role=current_user.role.value if current_user.role else "investigator",
+        input_prompt=question,
+        session_id=session_id,
+        execution_type="agent_run",
+        trigger_source="user_chat",
+    )
+
+    try:
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if api_key:
+            reply, action, steps = _run_anthropic_tool_loop(db, current_user, question, context_blocks, session_id, api_key, reasoning_steps, run.id)
+        else:
+            reply, action, steps = _run_local_fallback_agent_loop(db, current_user, question, context_blocks, session_id, reasoning_steps, run.id)
+
+        total_ms = round((time.perf_counter() - t_start) * 1000, 2)
+        finish_agent_run(
+            db=db,
+            run_id=run.id,
+            output_summary=reply,
+            decision="pending_human_confirmation" if action else "completed_synthesis",
+            total_latency_ms=total_ms,
+            status="COMPLETED",
+        )
+        return reply, action, steps
+    except Exception as err:
+        total_ms = round((time.perf_counter() - t_start) * 1000, 2)
+        finish_agent_run(
+            db=db,
+            run_id=run.id,
+            output_summary=f"Agent loop error: {err}",
+            status="FAILED",
+            total_latency_ms=total_ms,
+            error_details={"message": str(err)},
+        )
+        raise
 
 
 # ── Anthropic API Tool-Use Agent Loop ─────────────────────────────────────────
@@ -47,6 +81,7 @@ def _run_anthropic_tool_loop(
     session_id: Optional[str],
     api_key: str,
     reasoning_steps: List[str],
+    run_id: Optional[str] = None,
 ) -> Tuple[str, Optional[models.PendingAgentAction], List[str]]:
     
     messages = [{"role": "user", "content": question}]
@@ -86,7 +121,6 @@ def _run_anthropic_tool_loop(
             # Check if model called a tool
             tool_calls = [b for b in content_blocks if b.get("type") == "tool_use"]
             if not tool_calls:
-                # Model finished with final text response
                 final_text = "\n".join([b["text"] for b in content_blocks if b.get("type") == "text"]).strip()
                 return final_text or "Analysis completed.", None, reasoning_steps
 
@@ -94,7 +128,6 @@ def _run_anthropic_tool_loop(
                 tool_name = tool_block["name"]
                 tool_args = sanitize_tool_output(tool_block.get("input", {}))
 
-                # Check if it's a WRITE TOOL (requires human confirmation)
                 if tool_name in ["create_task", "assign_case", "add_comment"]:
                     desc = describe_write_action(tool_name, tool_args, db)
                     pending_action = models.PendingAgentAction(
@@ -112,6 +145,9 @@ def _run_anthropic_tool_loop(
                     step_msg = f"⚠️ Requested write action '{tool_name}' — Paused for human officer confirmation."
                     reasoning_steps.append(step_msg)
 
+                    if run_id:
+                        log_tool_call(db, run_id, tool_name, tool_args, {"action_id": pending_action.id, "status": "pending_confirmation"}, 0.0, status="SUCCESS")
+
                     text_content = "\n".join([b["text"] for b in content_blocks if b.get("type") == "text"]).strip()
                     final_reply = text_content or f"I have prepared the action: {desc}. Please confirm below to execute."
                     return final_reply, pending_action, reasoning_steps
@@ -120,15 +156,13 @@ def _run_anthropic_tool_loop(
                 step_msg = f"🔧 Executing tool '{tool_name}' with args {json.dumps(tool_args)}"
                 reasoning_steps.append(step_msg)
                 
-                # Log audit entry
-                db.add(models.AuditLog(
-                    user_id=current_user.id,
-                    action="agent_read_tool_executed",
-                    detail=f"AI Agent executed tool '{tool_name}'"
-                ))
-                db.commit()
-
+                t_t0 = time.perf_counter()
                 tool_result = execute_read_tool(db, tool_name, tool_args)
+                t_dur = round((time.perf_counter() - t_t0) * 1000, 2)
+
+                if run_id:
+                    log_tool_call(db, run_id, tool_name, tool_args, tool_result, t_dur, status="SUCCESS")
+
                 messages.append({"role": "assistant", "content": content_blocks})
                 messages.append({
                     "role": "user",
@@ -143,6 +177,8 @@ def _run_anthropic_tool_loop(
 
         except Exception as e:
             logger.error(f"Error in Anthropic agent loop: {e}")
+            if run_id:
+                log_tool_call(db, run_id, "llm_query_error", {}, {}, 0.0, status="FAILED", error_message=str(e))
             break
 
     # Fallback if max steps reached
@@ -189,6 +225,7 @@ def _run_local_fallback_agent_loop(
     context_blocks: List[str],
     session_id: Optional[str],
     reasoning_steps: List[str],
+    run_id: Optional[str] = None,
 ) -> Tuple[str, Optional[models.PendingAgentAction], List[str]]:
     """Heuristic intent detection fallback agent loop for offline/demo operation."""
     q_lower = question.lower()
@@ -219,6 +256,9 @@ def _run_local_fallback_agent_loop(
         db.commit()
         db.refresh(pending_action)
 
+        if run_id:
+            log_tool_call(db, run_id, "create_task", tool_args, {"action_id": pending_action.id}, 0.0, status="SUCCESS")
+
         reasoning_steps.append(f"Detected intent to create task on case {case_code}.")
         reasoning_steps.append("⚠️ Generated pending task creation action — waiting for human confirmation.")
         return f"I have prepared a new task for case **{case_code}**: *\"{title}\"*. Please review and confirm the action below.", pending_action, reasoning_steps
@@ -239,6 +279,9 @@ def _run_local_fallback_agent_loop(
         db.add(pending_action)
         db.commit()
         db.refresh(pending_action)
+
+        if run_id:
+            log_tool_call(db, run_id, "assign_case", tool_args, {"action_id": pending_action.id}, 0.0, status="SUCCESS")
 
         reasoning_steps.append(f"Detected intent to assign officer to case {case_code}.")
         reasoning_steps.append("⚠️ Generated pending case assignment action — waiting for human confirmation.")
@@ -283,6 +326,9 @@ def _run_local_fallback_agent_loop(
         db.commit()
         db.refresh(pending_action)
 
+        if run_id:
+            log_tool_call(db, run_id, "add_comment", tool_args, {"action_id": pending_action.id}, 0.0, status="SUCCESS")
+
         reasoning_steps.append(f"Detected intent to add comment on case {case_code}.")
         reasoning_steps.append("⚠️ Generated pending add_comment action — waiting for human confirmation.")
         return f"I have prepared a comment for case **{case_code}**: *\"{comment_text}\"*. Please review and confirm the action below.", pending_action, reasoning_steps
@@ -292,19 +338,34 @@ def _run_local_fallback_agent_loop(
         reasoning_steps.append("🔧 Executed tool 'get_offender_risk' → Calculated behavioral risk profiles.")
         person = db.query(models.Person).filter(models.Person.name.ilike("%ramesh%")).first()
         person_id = person.id if person else "Black Hat"
+        t0 = time.perf_counter()
         result = execute_read_tool(db, "get_offender_risk", {"person_id": person_id})
+        dur = round((time.perf_counter() - t0) * 1000, 2)
+        if run_id:
+            log_tool_call(db, run_id, "get_offender_risk", {"person_id": person_id}, result, dur, status="SUCCESS")
+
         if isinstance(result, dict) and "risk_score" in result:
             reasoning_steps.append(f"Risk Score Result for {result.get('name', 'Suspect')}: {result.get('risk_level', 'HIGH')} (Score: {result.get('risk_score', 82)})")
 
     if "finance" in q_lower or "money" in q_lower or "trail" in q_lower:
         reasoning_steps.append(f"🔧 Executed tool 'get_financial_trail' for case {case_code}.")
+        t0 = time.perf_counter()
         fin_res = execute_read_tool(db, "get_financial_trail", {"case_id": case_code})
+        dur = round((time.perf_counter() - t0) * 1000, 2)
+        if run_id:
+            log_tool_call(db, run_id, "get_financial_trail", {"case_id": case_code}, fin_res, dur, status="SUCCESS")
+
         flagged = fin_res.get("flagged_count", 0) if isinstance(fin_res, dict) else 0
         reasoning_steps.append(f"Financial Trail Result: Found {flagged} flagged transaction(s).")
 
     if "similar" in q_lower:
         reasoning_steps.append(f"🔧 Executed tool 'get_similar_cases' for case {case_code}.")
+        t0 = time.perf_counter()
         sim_res = execute_read_tool(db, "get_similar_cases", {"case_id": case_code})
+        dur = round((time.perf_counter() - t0) * 1000, 2)
+        if run_id:
+            log_tool_call(db, run_id, "get_similar_cases", {"case_id": case_code}, sim_res, dur, status="SUCCESS")
+
         reasoning_steps.append(f"TF-IDF Similarity Search Result: Found {len(sim_res) if isinstance(sim_res, list) else 0} matching cases.")
 
     # Call standard RAG answer generator for Q&A

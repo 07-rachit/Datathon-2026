@@ -164,7 +164,15 @@ npm run dev
 
 ## 🧪 Automated Testing
 
-Run the automated backend test suite (25 unit tests covering auth, RBAC, cases, RAG chat, PDF export, admin CRUD, offender profiling, analytics, financial trails, KSP crime number formatting, sensitive masking, investigation timelines, gang group detection, reasoning steps, and seasonal trends):
+### 🔍 Bounty 4: Tool & Agent Observability Dashboard
+- **Centralized Observability Engine:** `agent_runs` and `tool_calls` data models capturing run ID, parent run ID, user context, prompt, outputs, decisions, status, and latency breakdowns (`queue_time`, `processing_time`, `model_inference_time`, `tool_execution_time`).
+- **REST APIs (`/api/observability`):** Searchable, paginated list of agent runs (`/runs`), detail inspector (`/runs/{id}`), execution tree view (`/runs/{id}/tree`), performance summary stats (`/stats/summary`), and tool rankings (`/tools`).
+- **Operator Observability Matrix UI (`/observability`):** Ops dashboard with top KPI cards, live polling, status indicators, searchable execution table, tool performance telemetry, and a side drawer inspecting step-by-step tool invocations and downloadable trace logs.
+- **Sensitive Data Sanitization:** Automatic scrubbing of passwords, tokens, API keys, and sensitive statutory fields before persistence or display.
+
+---
+
+Run the automated backend test suite (74 unit & integration tests):
 ```bash
 cd backend
 python -m pytest tests/ -v

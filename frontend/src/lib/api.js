@@ -448,6 +448,33 @@ export async function fetchJobStats() {
   return data;
 }
 
+// ── Observability & Agent Runs APIs ─────────────────────────────────────────
+
+export async function fetchAgentRuns(params = {}) {
+  const { data } = await api.get("/observability/runs", { params });
+  return data;
+}
+
+export async function fetchAgentRunDetail(runId) {
+  const { data } = await api.get(`/observability/runs/${runId}`);
+  return data;
+}
+
+export async function fetchAgentRunTree(runId) {
+  const { data } = await api.get(`/observability/runs/${runId}/tree`);
+  return data;
+}
+
+export async function fetchObservabilityStats() {
+  const { data } = await api.get("/observability/stats/summary");
+  return data;
+}
+
+export async function fetchToolStats() {
+  const { data } = await api.get("/observability/tools");
+  return data;
+}
+
 export default api;
 
 

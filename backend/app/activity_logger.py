@@ -74,6 +74,19 @@ def record_activity(
     return activity
 
 
+def _get_db_session():
+    try:
+        from app.database import get_db
+        from app.main import app
+        if get_db in app.dependency_overrides:
+            override = app.dependency_overrides[get_db]
+            gen = override()
+            return next(gen), False
+    except Exception:
+        pass
+    return SessionLocal(), True
+
+
 class ActivityLoggingMiddleware(BaseHTTPMiddleware):
     """Automatically logs HTTP API actions into persistent activity history."""
     async def dispatch(self, request: Request, call_next: Any) -> Response:
@@ -91,7 +104,7 @@ class ActivityLoggingMiddleware(BaseHTTPMiddleware):
 
         if should_log:
             try:
-                db = SessionLocal()
+                db, is_owned = _get_db_session()
                 try:
                     user_id = getattr(request.state, "user_id", None)
                     user_name = getattr(request.state, "user_name", None)
@@ -131,7 +144,8 @@ class ActivityLoggingMiddleware(BaseHTTPMiddleware):
                         execution_duration_ms=duration_ms,
                     )
                 finally:
-                    db.close()
+                    if is_owned:
+                        db.close()
             except Exception as e:
                 log = get_logger("activity_middleware")
                 log.error(f"Failed to record activity log: {e}")
