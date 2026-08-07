@@ -51,6 +51,8 @@ export default function Assistant() {
           }
         })
         .catch(() => {
+          localStorage.removeItem(ACTIVE_SESSION_KEY);
+          setActiveSessionId(null);
           setMessages([]);
         });
     } else {
@@ -66,8 +68,16 @@ export default function Assistant() {
     try {
       const list = await listChatSessions();
       setSessions(list);
-      if (!activeSessionId && list.length > 0) {
-        setActiveSessionId(list[0].id);
+      const storedSession = localStorage.getItem(ACTIVE_SESSION_KEY);
+      if (list.length > 0) {
+        if (!storedSession || !list.some((s) => s.id === storedSession)) {
+          setActiveSessionId(list[0].id);
+        } else {
+          setActiveSessionId(storedSession);
+        }
+      } else {
+        localStorage.removeItem(ACTIVE_SESSION_KEY);
+        setActiveSessionId(null);
       }
     } catch {
       setSessions([]);
@@ -108,14 +118,28 @@ export default function Assistant() {
 
     try {
       let sid = activeSessionId;
-      if (!sid) {
+      if (!sid || (sessions.length > 0 && !sessions.some((s) => s.id === sid))) {
         const newS = await createChatSession();
         sid = newS.id;
         setActiveSessionId(sid);
         setSessions((prev) => [newS, ...prev]);
       }
 
-      const answer = await sendChatMessage(sid, text, language);
+      let answer;
+      try {
+        answer = await sendChatMessage(sid, text, language);
+      } catch (sendErr) {
+        if (sendErr.response && sendErr.response.status === 404) {
+          const newS = await createChatSession();
+          sid = newS.id;
+          setActiveSessionId(sid);
+          setSessions((prev) => [newS, ...prev]);
+          answer = await sendChatMessage(sid, text, language);
+        } else {
+          throw sendErr;
+        }
+      }
+
       const asstMsg = {
         ...answer.assistant_message,
         reasoning_steps: answer.reasoning_steps || answer.assistant_message.reasoning_steps || [],

@@ -12,10 +12,11 @@ import Offenders from "./pages/Offenders.jsx";
 import Insights from "./pages/Insights.jsx";
 import Assistant from "./pages/Assistant.jsx";
 import MyWork from "./pages/MyWork.jsx";
+import CitizenReport from "./pages/CitizenReport.jsx";
+import CitizenReportsAdmin from "./pages/CitizenReportsAdmin.jsx";
 import Layout from "./components/Layout.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
 import { getCurrentUser } from "./lib/api.js";
-
 
 function ProtectedRoute({ children }) {
   const user = getCurrentUser();
@@ -28,6 +29,8 @@ export default function App() {
     <NotificationProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Public Citizen Crime Reporting Route */}
+        <Route path="/report-crime" element={<CitizenReport />} />
         <Route
           path="/*"
           element={
@@ -46,6 +49,8 @@ export default function App() {
                   <Route path="/import" element={<Import />} />
                   <Route path="/offenders" element={<Offenders />} />
                   <Route path="/insights" element={<Insights />} />
+                  <Route path="/citizen-reports" element={<CitizenReportsAdmin />} />
+                  <Route path="/citizen-portal" element={<CitizenReport />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

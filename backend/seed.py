@@ -12,8 +12,7 @@ from app.database import SessionLocal, Base, engine
 from app import models, auth, schemas, rag
 
 # Re-create tables cleanly for idempotent demo state
-if engine.name == "sqlite":
-    Base.metadata.drop_all(bind=engine)
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
@@ -222,6 +221,8 @@ story_a_cases = [
         "summary": "Night break-in at electronics godown. CCTV disabled with laser cutter. Over ₹4 Lakhs worth laptops looted.",
         "severity": models.Severity.medium,
         "date": datetime(2025, 11, 10, 3, 15),
+        "lat": 12.9716,
+        "lng": 77.5946,
     },
     {
         "case_id": "CR-2026-0102",
@@ -232,6 +233,8 @@ story_a_cases = [
         "summary": "Armed robbers held store manager at gunpoint during closing hours. Stole gold ornaments and fled on getaway bike.",
         "severity": models.Severity.high,
         "date": datetime(2026, 2, 14, 21, 30),
+        "lat": 12.9750,
+        "lng": 77.6010,
     },
     {
         "case_id": "CR-2026-0103",
@@ -242,6 +245,8 @@ story_a_cases = [
         "summary": "Highway heist on cash transfer van. Spike strip deployed on road. Suspect Ramesh Rao spotted on toll camera.",
         "severity": models.Severity.critical,
         "date": datetime(2026, 5, 20, 23, 45),
+        "lat": 12.2958,
+        "lng": 76.6394,
     },
     {
         "case_id": "CR-2026-0104",
@@ -252,6 +257,8 @@ story_a_cases = [
         "summary": "Attempted night burglary at cooperative bank. Alarm triggered; suspect Ramesh Rao evaded arrest.",
         "severity": models.Severity.high,
         "date": datetime(2026, 6, 28, 2, 0),
+        "lat": 30.8920,
+        "lng": 75.8320,
     },
 ]
 
@@ -267,11 +274,12 @@ for cd in story_a_cases:
         status=models.CaseStatus.open,
         severity=cd["severity"],
         incident_date=cd["date"],
-        latitude=12.9716,
-        longitude=77.5946,
+        latitude=cd.get("lat", 12.9716),
+        longitude=cd.get("lng", 77.5946),
     )
     db.add(c)
     db.flush()
+
 
     p = models.Person(
         case_id=c.id,
@@ -576,31 +584,48 @@ print("--> Seeded Storyline F (Sensitive Complainant Masking Demo Case).")
 
 # ── 9. Background Noise Cases (~30 Cases) ────────────────────────────────────
 
-crime_types = ["Burglary", "Vehicle Theft", "Fraud", "Assault", "Theft"]
-districts = ["Bengaluru City", "Ludhiana West", "Mysuru"]
-stations = ["PS Commercial Street", "PS Model Town", "PS Mysuru Highway", "PS Central"]
+crime_types = ["Burglary", "Vehicle Theft", "Fraud", "Assault", "Theft", "Robbery"]
+ludhiana_stations = ["PS Model Town", "PS Civil Lines", "PS Sarabha Nagar", "PS Focal Point", "PS Clock Tower"]
+ludhiana_districts = ["Ludhiana West", "Ludhiana Central", "Ludhiana Industrial"]
 
-for i in range(1, 31):
+for i in range(1, 36):
     dt = datetime(2026, 1, 1) + timedelta(days=random.randint(0, 180), hours=random.randint(0, 23))
     ctype = random.choice(crime_types)
-    dist = random.choice(districts)
+    
+    if i % 2 == 0:
+        dist = random.choice(ludhiana_districts)
+        station = random.choice(ludhiana_stations)
+        base_lat, base_lng = 30.9010, 75.8573
+    elif i % 3 == 0:
+        dist = "Mysuru"
+        station = "PS Mysuru Highway"
+        base_lat, base_lng = 12.2958, 76.6394
+    else:
+        dist = "Bengaluru City"
+        station = random.choice(["PS Commercial Street", "PS Central"])
+        base_lat, base_lng = 12.9716, 77.5946
+
+    lat = base_lat + (random.random() - 0.5) * 0.06
+    lng = base_lng + (random.random() - 0.5) * 0.06
+
     c_bg = models.Case(
         case_id=f"CR-2026-9{i:03d}",
-        title=f"{ctype} Incident #{i}",
+        title=f"{ctype} in {dist}",
         crime_type=ctype,
         district=dist,
-        station_name=random.choice(stations),
+        station_name=station,
         summary=f"Standard incident investigation for {ctype.lower()} recorded in {dist}.",
         status=random.choice(list(models.CaseStatus)),
         severity=random.choice(list(models.Severity)),
         incident_date=dt,
-        latitude=12.97 + (random.random() * 0.05),
-        longitude=77.59 + (random.random() * 0.05),
+        latitude=round(lat, 5),
+        longitude=round(lng, 5),
     )
     db.add(c_bg)
 
 db.commit()
-print("--> Seeded 30 Background Noise Cases.")
+print("--> Seeded 35 Background Noise Cases across Ludhiana, Mysuru & Bengaluru.")
+
 
 # ── 10. Seed Sprint 6 Case Collaboration Data (Assignments, Tasks, Comments) ──
 
@@ -706,7 +731,88 @@ if case_robbery and analyst_user:
 db.commit()
 print("--> Seeded Sprint 6 Case Collaboration Data (Assignments, Tasks, Comments).")
 
-# ── 11. Rebuild RAG Search Index ─────────────────────────────────────────────
+# ── 11. Citizen Crime Reports Seed Data ────────────────────────────────────────
+
+report1 = models.CitizenReport(
+    id="rep_001",
+    tracking_id="TRK-2026-00145",
+    crime_type="Cyber Fraud / Phishing",
+    incident_date=datetime(2026, 8, 5, 14, 30),
+    location="Indiranagar 100ft Road, Bengaluru",
+    latitude=12.9784,
+    longitude=77.6408,
+    description="Citizen reported unauthorized transfer of Rs 1.5 Lakhs after receiving a fake KYC update link. CCTV footage attached from nearby ATM kiosk.",
+    reporter_name="Rohan Mehta",
+    reporter_phone="+91-9876501234",
+    reporter_email="rohan.m@example.com",
+    status="pending",
+    ai_classification="Cybercrime",
+    ai_priority="high",
+    ai_summary="AI Analysis: Cyber fraud phishing incident. High financial impact (Rs 1.5L). Attached evidence includes ATM CCTV clip & SMS screenshot. Priority: HIGH.",
+    created_at=datetime(2026, 8, 5, 14, 35)
+)
+db.add(report1)
+
+ev1_1 = models.ReportEvidence(
+    id="ev_001_1",
+    report_id="rep_001",
+    file_name="atm_cctv_footage.mp4",
+    file_type="video",
+    file_path="/uploads/evidence/atm_cctv_footage.mp4",
+    created_at=datetime(2026, 8, 5, 14, 35)
+)
+ev1_2 = models.ReportEvidence(
+    id="ev_001_2",
+    report_id="rep_001",
+    file_name="bank_statement_screenshot.png",
+    file_type="image",
+    file_path="/uploads/evidence/bank_statement_screenshot.png",
+    created_at=datetime(2026, 8, 5, 14, 35)
+)
+db.add_all([ev1_1, ev1_2])
+
+report2 = models.CitizenReport(
+    id="rep_002",
+    tracking_id="TRK-2026-00146",
+    crime_type="Jewelry Store Burglary",
+    incident_date=datetime(2026, 8, 6, 2, 15),
+    location="Commercial Street Kiosk #4, Bengaluru",
+    latitude=12.9822,
+    longitude=77.6083,
+    description="Night robbery at gold ornament showroom. Display glass shattered and items worth Rs 4.2 Lakhs stolen. Suspect seen fleeing on motorcycle.",
+    reporter_name="Sunil Verma",
+    reporter_phone="+91-9811223344",
+    reporter_email="sunil.verma@example.com",
+    status="pending",
+    ai_classification="Burglary",
+    ai_priority="critical",
+    ai_summary="AI Analysis: Heinous commercial robbery. Significant loss value (Rs 4.2L). CCTV metadata shows suspect getaway vehicle. Priority: CRITICAL.",
+    created_at=datetime(2026, 8, 6, 2, 30)
+)
+db.add(report2)
+
+ev2_1 = models.ReportEvidence(
+    id="ev_002_1",
+    report_id="rep_002",
+    file_name="store_front_cctv.mp4",
+    file_type="cctv",
+    file_path="/uploads/evidence/store_front_cctv.mp4",
+    created_at=datetime(2026, 8, 6, 2, 30)
+)
+ev2_2 = models.ReportEvidence(
+    id="ev_002_2",
+    report_id="rep_002",
+    file_name="stolen_items_list.pdf",
+    file_type="document",
+    file_path="/uploads/evidence/stolen_items_list.pdf",
+    created_at=datetime(2026, 8, 6, 2, 30)
+)
+db.add_all([ev2_1, ev2_2])
+
+db.commit()
+print("--> Seeded Citizen Crime Reports and attached evidence items.")
+
+# ── 12. Rebuild RAG Search Index ─────────────────────────────────────────────
 
 indexed_count = rag.build_index(db)
 print(f"--> Rebuilt RAG TF-IDF Search Index with {indexed_count} total evidence chunks.")

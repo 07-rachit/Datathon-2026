@@ -22,6 +22,7 @@ REQUIRED_COLS = {
 
 
 @router.post("/cases", status_code=status.HTTP_200_OK)
+@router.post("/cases/csv", status_code=status.HTTP_200_OK)
 def import_cases_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -80,33 +81,34 @@ def import_cases_csv(
             lng = float(row["lng"]) if row.get("lng") else 85.1376
 
             existing = db.query(models.Case).filter(models.Case.case_id == case_id).first()
+            raw_status = (row.get("status") or "open").lower().strip()
+            raw_severity = (row.get("severity") or "medium").lower().strip()
+
             if existing:
                 existing.title = (row.get("title") or existing.title).strip()
-                existing.category = (row.get("crime_type") or existing.category).strip()
+                existing.crime_type = (row.get("crime_type") or existing.crime_type).strip()
                 existing.district = (row.get("district") or existing.district).strip()
-                existing.police_station = (row.get("station_name") or existing.police_station).strip()
-                existing.status = (row.get("status") or existing.status).strip()
-                existing.gravity = (row.get("severity") or existing.gravity).strip()
+                existing.station_name = (row.get("station_name") or existing.station_name).strip()
+                existing.status = raw_status
+                existing.severity = raw_severity
                 existing.incident_date = inc_date
                 existing.latitude = lat
                 existing.longitude = lng
                 existing.summary = (row.get("summary") or existing.summary).strip()
-                existing.modus_operandi = (row.get("modus_operandi") or existing.modus_operandi).strip()
                 updated_count += 1
             else:
                 new_case = models.Case(
                     case_id=case_id,
                     title=(row.get("title") or "").strip(),
-                    category=(row.get("crime_type") or "").strip(),
-                    district=(row.get("district") or "").strip(),
-                    police_station=(row.get("station_name") or "").strip(),
-                    status=(row.get("status") or "OPEN").strip(),
-                    gravity=(row.get("severity") or "MEDIUM").strip(),
+                    crime_type=(row.get("crime_type") or "General").strip(),
+                    district=(row.get("district") or "Bengaluru").strip(),
+                    station_name=(row.get("station_name") or "Central PS").strip(),
+                    status=raw_status,
+                    severity=raw_severity,
                     incident_date=inc_date,
                     latitude=lat,
                     longitude=lng,
                     summary=(row.get("summary") or "").strip(),
-                    modus_operandi=(row.get("modus_operandi") or "").strip(),
                 )
                 db.add(new_case)
                 imported_count += 1
@@ -124,24 +126,25 @@ def import_cases_csv(
         "status": "success",
         "imported": imported_count,
         "updated": updated_count,
-        "errors": errors,
+        "skipped": [{"row": err.split(":")[0], "reason": err} for err in errors],
         "total_processed": imported_count + updated_count,
     }
 
 
 @router.get("/template")
+@router.get("/cases/csv/template")
 def download_csv_template(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     """Generates a sample CSV template for bulk case uploads."""
     template_data = (
-        "case_id,title,crime_type,district,station_name,status,severity,incident_date,lat,lng,summary,modus_operandi\n"
-        "CASE-2026-901,Bank Fraud Scam,Cybercrime,Patna,Kotwali,OPEN,HIGH,2026-03-15,25.612,85.141,Phishing call targeted senior citizen,Vishing via spoofed bank number\n"
-        "CASE-2026-902,Highway Robbery,Robbery,Gaya,Civil Lines,INVESTIGATING,CRITICAL,2026-03-18,24.795,85.000,Armed hijack of freight container,Overnight roadblock on NH-83\n"
+        "case_id,title,crime_type,district,station_name,status,severity,incident_date,lat,lng,summary\n"
+        "CR-2026-9901,Bank Fraud Scam,Cybercrime,Bengaluru,Cyber Crime PS,open,high,2026-03-15,12.9716,77.5946,Phishing call targeted senior citizen\n"
+        "CR-2026-9902,Highway Robbery,Robbery,Mysuru,Civil Lines PS,under_review,critical,2026-03-18,12.2958,76.6394,Armed hijack of freight container\n"
     )
     from fastapi.responses import Response
     return Response(
         content=template_data,
         media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="cases_import_template.csv"'}
+        headers={"Content-Disposition": 'attachment; filename="crime_cases_template.csv"'}
     )

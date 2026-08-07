@@ -288,11 +288,13 @@ def _run_local_fallback_agent_loop(
         return f"I have prepared a comment for case **{case_code}**: *\"{comment_text}\"*. Please review and confirm the action below.", pending_action, reasoning_steps
 
     # Intent 3: Read Tool Execution (Risk / Finance / Similar Cases / Timeline)
-    if "risk" in q_lower or "offender" in q_lower:
+    if any(k in q_lower for k in ["risk", "offender", "suspect", "accused", "ramesh", "black hat", "who is", "tell me"]):
         reasoning_steps.append("🔧 Executed tool 'get_offender_risk' → Calculated behavioral risk profiles.")
-        result = execute_read_tool(db, "get_offender_risk", {"person_id": "Black Hat"})
+        person = db.query(models.Person).filter(models.Person.name.ilike("%ramesh%")).first()
+        person_id = person.id if person else "Black Hat"
+        result = execute_read_tool(db, "get_offender_risk", {"person_id": person_id})
         if isinstance(result, dict) and "risk_score" in result:
-            reasoning_steps.append(f"Risk Score Result: {result.get('risk_level', 'HIGH')} ({result.get('risk_score', 82)})")
+            reasoning_steps.append(f"Risk Score Result for {result.get('name', 'Suspect')}: {result.get('risk_level', 'HIGH')} (Score: {result.get('risk_score', 82)})")
 
     if "finance" in q_lower or "money" in q_lower or "trail" in q_lower:
         reasoning_steps.append(f"🔧 Executed tool 'get_financial_trail' for case {case_code}.")

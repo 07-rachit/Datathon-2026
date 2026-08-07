@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { importCasesCSV } from "../lib/api.js";
+import { importCasesCSV, downloadImportTemplate } from "../lib/api.js";
 
 export default function Import() {
   const [file, setFile] = useState(null);
@@ -40,13 +40,12 @@ export default function Import() {
           <p className="font-mono text-teal text-xs tracking-[0.3em] mb-1">DATA INGESTION · BULK IMPORT</p>
           <h2 className="font-display text-3xl text-ink">Bulk Case Import</h2>
         </div>
-        <a
-          href="/api/import/cases/csv/template"
-          download="case_import_template.csv"
-          className="text-xs font-mono text-teal border border-teal/40 hover:bg-teal/10 rounded px-4 py-2 transition inline-flex items-center gap-1.5"
+        <button
+          onClick={downloadImportTemplate}
+          className="text-xs font-mono text-teal border border-teal/40 hover:bg-teal/10 rounded px-4 py-2 transition inline-flex items-center gap-1.5 cursor-pointer"
         >
           <span>↓</span> Download CSV Template
-        </a>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -771,4 +771,70 @@ class ActionConfirmResponse(BaseModel):
     result: Optional[Dict[str, Any]] = None
 
 
+# ── Citizen Crime Reporting Schemas ──────────────────────────────────────────
+
+class ReportEvidenceCreate(BaseModel):
+    file_name: str
+    file_type: str  # image / video / audio / document / cctv
+    file_path: Optional[str] = None
+
+
+class ReportEvidenceOut(BaseModel):
+    id: str
+    report_id: str
+    file_name: str
+    file_type: str
+    file_path: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CitizenReportCreate(BaseModel):
+    crime_type: str
+    incident_date: Optional[datetime] = None
+    location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: str
+    reporter_name: str
+    reporter_phone: str
+    reporter_email: Optional[str] = None
+    evidence: Optional[List[ReportEvidenceCreate]] = []
+
+
+class CitizenReportVerify(BaseModel):
+    action: str  # "approve" or "reject"
+    rejection_reason: Optional[str] = None
+
+
+class CitizenReportOut(BaseModel):
+    id: str
+    tracking_id: str
+    crime_type: str
+    incident_date: datetime
+    location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    description: str
+    reporter_name: str
+    reporter_phone: str
+    reporter_email: Optional[str] = None
+    status: str
+    ai_classification: Optional[str] = None
+    ai_priority: Optional[str] = None
+    ai_summary: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    created_case_id: Optional[str] = None
+    reviewed_by_user_id: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    created_at: datetime
+    evidence_items: List[ReportEvidenceOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+
 

@@ -574,3 +574,48 @@ class PendingAgentAction(Base):
     session = relationship("ChatSession")
     user = relationship("User")
 
+
+# ─── TRACE: CITIZEN CRIME REPORTING MODELS ───────────────────────────────────
+
+class CitizenReport(Base):
+    __tablename__ = "citizen_reports"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    tracking_id = Column(String, unique=True, index=True, nullable=False)  # e.g. TRK-2026-00145
+    crime_type = Column(String, nullable=False, index=True)
+    incident_date = Column(DateTime, nullable=False)
+    location = Column(String, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    description = Column(Text, nullable=False)
+    reporter_name = Column(String, nullable=False)
+    reporter_phone = Column(String, nullable=False)
+    reporter_email = Column(String, nullable=True)
+    status = Column(String, default="pending", nullable=False, index=True)  # pending / verified / rejected
+    ai_classification = Column(String, nullable=True)
+    ai_priority = Column(String, nullable=True)  # low / medium / high / critical
+    ai_summary = Column(Text, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    created_case_id = Column(String, ForeignKey("cases.id"), nullable=True)
+    reviewed_by_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    created_case = relationship("Case", foreign_keys=[created_case_id])
+    reviewed_by = relationship("User", foreign_keys=[reviewed_by_user_id])
+    evidence_items = relationship("ReportEvidence", back_populates="report", cascade="all, delete-orphan")
+
+
+class ReportEvidence(Base):
+    __tablename__ = "report_evidence"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    report_id = Column(String, ForeignKey("citizen_reports.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    file_type = Column(String, nullable=False)  # image / video / audio / document / cctv
+    file_path = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    report = relationship("CitizenReport", back_populates="evidence_items")
+
+
