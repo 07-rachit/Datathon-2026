@@ -1,10 +1,10 @@
-\"""
+"""
 AI Case Assistant chat endpoints.
 
 Implements the investigative RAG pipeline: deep search across case files,
 TF-IDF similarity retrieval, phone/suspect lookup, synonym expansion,
 and the unified AI agent loop for tool-use and action generation.
-\"""
+"""
 import json
 import re
 from datetime import datetime

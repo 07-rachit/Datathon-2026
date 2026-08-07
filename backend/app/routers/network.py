@@ -1,10 +1,10 @@
-\"""
+"""
 Criminal network graph and syndicate detection endpoints.
 
 Builds a force-directed graph of cases, persons, and financial accounts
 with shared-phone, co-accused, and financial transfer edges. Includes
 automated gang/syndicate cluster detection via connected component analysis.
-\"""
+"""
 from collections import defaultdict
 from typing import List, Dict, Any
 

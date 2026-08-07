@@ -1,10 +1,10 @@
-\"""
+"""
 Case management CRUD endpoints.
 
 Provides full lifecycle management for crime cases including creation,
 listing with pagination, detail retrieval, status updates, and phone
 number masking based on user role (RBAC).
-\"""
+"""
 from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
 

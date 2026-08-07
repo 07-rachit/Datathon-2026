@@ -1,10 +1,10 @@
-\"""
+"""
 Real-time notification endpoints.
 
 Provides WebSocket-based live notifications for case events, task assignments,
 and high-severity alerts, plus REST endpoints for notification history
 and mark-as-read operations.
-\"""
+"""
 import json
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status

@@ -1,9 +1,9 @@
-\"""
+"""
 Citizen Crime Reporting (TRACE) endpoints.
 
 Handles public report submissions, tracking by report key, officer verification,
 and auto-conversion of verified citizen reports into official CrimeIntel cases.
-\"""
+"""
 import random
 import uuid
 from datetime import datetime
