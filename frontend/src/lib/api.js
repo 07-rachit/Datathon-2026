@@ -411,6 +411,43 @@ export async function deleteActivityRecord(activityId) {
   return data;
 }
 
+// ── Background Jobs APIs ────────────────────────────────────────────────────
+
+export async function submitBackgroundJob(payload) {
+  const { data } = await api.post("/jobs", payload);
+  return data;
+}
+
+export async function fetchJobs(params = {}) {
+  const { data } = await api.get("/jobs", { params });
+  return data;
+}
+
+export async function fetchJobDetail(jobId) {
+  const { data } = await api.get(`/jobs/${jobId}`);
+  return data;
+}
+
+export async function fetchJobLogs(jobId) {
+  const { data } = await api.get(`/jobs/${jobId}/logs`);
+  return data;
+}
+
+export async function retryJob(jobId) {
+  const { data } = await api.post(`/jobs/${jobId}/retry`);
+  return data;
+}
+
+export async function cancelJob(jobId) {
+  const { data } = await api.post(`/jobs/${jobId}/cancel`);
+  return data;
+}
+
+export async function fetchJobStats() {
+  const { data } = await api.get("/jobs/stats/summary");
+  return data;
+}
+
 export default api;
 
 

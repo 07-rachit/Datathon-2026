@@ -15,6 +15,7 @@ import MyWork from "./pages/MyWork.jsx";
 import CitizenReport from "./pages/CitizenReport.jsx";
 import CitizenReportsAdmin from "./pages/CitizenReportsAdmin.jsx";
 import ActivityHistory from "./pages/ActivityHistory.jsx";
+import JobCenter from "./pages/JobCenter.jsx";
 import Layout from "./components/Layout.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
 import { getCurrentUser } from "./lib/api.js";
@@ -47,6 +48,7 @@ export default function App() {
                   <Route path="/my-work" element={<MyWork />} />
                   <Route path="/audit" element={<AuditTrail />} />
                   <Route path="/activity" element={<ActivityHistory />} />
+                  <Route path="/jobs" element={<JobCenter />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/import" element={<Import />} />
                   <Route path="/offenders" element={<Offenders />} />

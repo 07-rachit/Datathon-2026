@@ -532,6 +532,55 @@ class ActivityHistory(Base):
     user = relationship("User", foreign_keys=[user_id])
 
 
+class JobStatusEnum(str, enum.Enum):
+    QUEUED = "QUEUED"
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    RETRYING = "RETRYING"
+    TIMEOUT = "TIMEOUT"
+
+
+class BackgroundJob(Base):
+    """
+    Persistent Background Task Runner Model.
+    Tracks asynchronous jobs, automatic retries, execution progress, logs, and outputs.
+    """
+    __tablename__ = "background_jobs"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    job_type = Column(String, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    user_name = Column(String, nullable=True)
+    entity_type = Column(String, nullable=True, index=True)
+    entity_id = Column(String, nullable=True, index=True)
+    
+    input_payload_json = Column(Text, nullable=True)
+    output_result_json = Column(Text, nullable=True)
+    status = Column(String, default="QUEUED", nullable=False, index=True)
+    progress_pct = Column(Integer, default=0, nullable=False)
+    
+    retry_count = Column(Integer, default=0, nullable=False)
+    max_retries = Column(Integer, default=3, nullable=False)
+    retry_delay_seconds = Column(Integer, default=2, nullable=False)
+    timeout_seconds = Column(Integer, default=120, nullable=False)
+    worker_id = Column(String, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    failed_at = Column(DateTime, nullable=True)
+    execution_duration_ms = Column(Float, nullable=True)
+    
+    logs_json = Column(Text, nullable=True)
+    error_details = Column(Text, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
 # ─── SPRINT 6: CASE COLLABORATION MODELS ─────────────────────────────────────
 
 class CaseComment(Base):

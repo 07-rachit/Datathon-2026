@@ -868,6 +868,57 @@ class ActivityHistoryListResponse(BaseModel):
     results: List[ActivityHistoryOut]
 
 
+# ── Background Job Schemas ──────────────────────────────────────────────────
+
+class BackgroundJobCreate(BaseModel):
+    job_type: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    input_payload: Optional[Dict[str, Any]] = None
+    max_retries: Optional[int] = 3
+    retry_delay_seconds: Optional[int] = 2
+    timeout_seconds: Optional[int] = 120
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class BackgroundJobOut(BaseModel):
+    id: str
+    job_type: str
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    input_payload: Optional[Any] = None
+    output_result: Optional[Any] = None
+    status: str
+    progress_pct: int = 0
+    retry_count: int = 0
+    max_retries: int = 3
+    retry_delay_seconds: int = 2
+    timeout_seconds: int = 120
+    worker_id: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    execution_duration_ms: Optional[float] = None
+    logs: List[str] = []
+    error_details: Optional[Any] = None
+    metadata: Optional[Any] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BackgroundJobListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[BackgroundJobOut]
+
+
+
 
 
 

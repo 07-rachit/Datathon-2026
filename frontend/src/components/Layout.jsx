@@ -15,6 +15,7 @@ const NAV = [
   { to: "/my-work", label: "My Work", code: "07", hasBadge: true },
   { to: "/audit", label: "Audit Trail", code: "08" },
   { to: "/activity", label: "Activity History", code: "09" },
+  { to: "/jobs", label: "Job Center", code: "10" },
 ];
 
 export default function Layout({ children }) {

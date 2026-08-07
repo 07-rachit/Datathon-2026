@@ -66,6 +66,16 @@ CrimeIntel integrates a centralized **Persistent Activity History Framework** (`
 
 ---
 
+## ⚙️ Background Task Runner with Retries (Bounty 3)
+
+CrimeIntel includes an asynchronous **Background Task Runner** (`background_jobs` table) for non-blocking operations:
+- **Asynchronous Execution Pipeline (`app/job_runner.py`):** Offloads heavy AI content generation, CSV case ingestion, PDF dossier exports, citizen report AI analysis, and business trend calculations to background worker threads.
+- **Automatic Retry Engine with Exponential Backoff:** Detects transient failures and automatically retries jobs (`QUEUED` $\rightarrow$ `RUNNING` $\rightarrow$ `RETRYING` $\rightarrow$ `COMPLETED`). Immediately halts unrecoverable validation/auth errors (`FAILED`) without wasting retry cycles.
+- **REST APIs (`/api/jobs`):** Submit jobs (`POST`), poll real-time status and progress percentage (`GET /{id}`), fetch step-by-step logs (`GET /{id}/logs`), manually re-queue failed jobs (`POST /{id}/retry`), and cancel active tasks (`POST /{id}/cancel`).
+- **Frontend Job Center (`/jobs`):** Dedicated Job Center UI (`JobCenter.jsx`) featuring 2s auto-polling progress bars, execution duration counters, status badges, log drawers, output downloads, and 1-click retry buttons.
+
+---
+
 ## ⚡ Real-Time In-App Alerts via WebSocket (Sprint 7)
 
 CrimeIntel delivers instant, multi-device live notifications over WebSockets (`/ws/notifications?token=<JWT>`):
