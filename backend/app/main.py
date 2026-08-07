@@ -35,24 +35,28 @@ def ensure_db_initialized():
         try:
             if db.query(models.User).filter(models.User.email == "admin@crimeintel.local").first() is None:
                 admin_user = models.User(
+                    id="user-admin-demo-001",
                     name="Admin User (DGP Office)",
                     email="admin@crimeintel.local",
                     hashed_password=app_auth.hash_password("Admin@123"),
                     role=models.RoleEnum.admin,
                 )
                 analyst_user = models.User(
+                    id="user-analyst-demo-001",
                     name="Lead Analyst Priya",
                     email="analyst@crimeintel.local",
                     hashed_password=app_auth.hash_password("Analyst@123"),
                     role=models.RoleEnum.analyst,
                 )
                 investigator_user = models.User(
+                    id="user-investigator-demo-001",
                     name="Inspector K. Sharma",
                     email="investigator@crimeintel.local",
                     hashed_password=app_auth.hash_password("Investigator@123"),
                     role=models.RoleEnum.investigator,
                 )
                 viewer_user = models.User(
+                    id="user-viewer-demo-001",
                     name="Junior Duty Officer",
                     email="viewer@crimeintel.local",
                     hashed_password=app_auth.hash_password("Viewer@123"),

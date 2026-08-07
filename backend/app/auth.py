@@ -78,13 +78,43 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_id: Optional[str] = payload.get("sub")
+        email: Optional[str] = payload.get("email")
+        if user_id is None and email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = None
+    if user_id:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None and email:
+        user = db.query(models.User).filter(models.User.email == email).first()
+
+    # Auto-provision demo account if querying a default demo user and missing
+    if user is None and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local"]:
+        role_map = {
+            "admin@crimeintel.local": (models.RoleEnum.admin, "Admin User (DGP Office)", "user-admin-demo-001"),
+            "analyst@crimeintel.local": (models.RoleEnum.analyst, "Lead Analyst Priya", "user-analyst-demo-001"),
+            "investigator@crimeintel.local": (models.RoleEnum.investigator, "Inspector K. Sharma", "user-investigator-demo-001"),
+            "viewer@crimeintel.local": (models.RoleEnum.viewer, "Junior Duty Officer", "user-viewer-demo-001"),
+        }
+        role, name, demo_id = role_map[email]
+        user = models.User(
+            id=demo_id,
+            name=name,
+            email=email,
+            hashed_password=hash_password("Admin@123"),
+            role=role,
+        )
+        db.add(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            user = db.query(models.User).filter(models.User.email == email).first()
+
     if user is None or not user.is_active:
         raise credentials_exception
     return user
