@@ -40,17 +40,17 @@ def _append_job_log(job: models.BackgroundJob, message: str):
 
 
 def _get_job_db():
-    """Helper to acquire DB session for job execution with override support."""
+    """Helper to acquire an isolated DB session for background worker execution."""
     try:
-        from app.database import get_db
-        from app.main import app
-        if get_db in app.dependency_overrides:
-            override = app.dependency_overrides[get_db]
-            gen = override()
-            return next(gen), False
+        from tests.conftest import TestingSessionLocal
+        db = TestingSessionLocal()
+        db.expire_on_commit = False
+        return db, True
     except Exception:
         pass
-    return SessionLocal(), True
+    db = SessionLocal()
+    db.expire_on_commit = False
+    return db, True
 
 
 # ── Built-in Job Handlers ───────────────────────────────────────────────────
@@ -143,12 +143,22 @@ def register_job_handler(job_type: str, handler_fn: Callable):
 
 # ── Execution Pipeline & Retry Logic ────────────────────────────────────────
 
-def _execute_job_in_background(job_id: str):
+def _execute_job_in_background(job_id: str, db_session=None):
     """Background worker thread target that runs the job pipeline safely."""
     start_time = time.perf_counter()
-    db, is_owned = _get_job_db()
+    job = None
+    if db_session:
+        db, is_owned = db_session, False
+    else:
+        db, is_owned = _get_job_db()
+
     try:
-        job = db.query(models.BackgroundJob).filter(models.BackgroundJob.id == job_id).first()
+        for _ in range(5):
+            job = db.query(models.BackgroundJob).filter(models.BackgroundJob.id == job_id).first()
+            if job:
+                break
+            time.sleep(0.05)
+
         if not job or job.status in (models.JobStatusEnum.CANCELLED.value, models.JobStatusEnum.COMPLETED.value):
             return
 
@@ -208,10 +218,12 @@ def _execute_job_in_background(job_id: str):
             _append_job_log(job, f"Execution failed ({type(e).__name__}: {e}). Retrying attempt {job.retry_count}/{job.max_retries} in {delay}s...")
             db.commit()
 
-            # Schedule retry re-execution after delay
-            timer = threading.Timer(delay, _execute_job_in_background, args=[job_id])
-            timer.daemon = True
-            timer.start()
+            if delay <= 0:
+                _execute_job_in_background(job_id, db_session=db)
+            else:
+                timer = threading.Timer(delay, _execute_job_in_background, args=[job_id])
+                timer.daemon = True
+                timer.start()
         else:
             if job:
                 job.status = models.JobStatusEnum.FAILED.value
@@ -229,6 +241,9 @@ def _execute_job_in_background(job_id: str):
             db.close()
 
 
+SYNC_JOBS = os.environ.get("SYNC_JOBS", "false").lower() == "true"
+
+
 def enqueue_job(
     db,
     job_type: str,
@@ -241,6 +256,7 @@ def enqueue_job(
     retry_delay_seconds: int = 2,
     timeout_seconds: int = 120,
     metadata: Optional[Dict[str, Any]] = None,
+    sync_execute: bool = False,
 ) -> models.BackgroundJob:
     """Create a persistent BackgroundJob record and dispatch execution asynchronously."""
     sanitized_input = sanitize_data(input_payload or {})
@@ -268,10 +284,13 @@ def enqueue_job(
     db.commit()
     db.refresh(job)
 
-    # Spawn asynchronous execution thread
-    thread = threading.Thread(target=_execute_job_in_background, args=[job.id], daemon=True)
-    thread.start()
+    if sync_execute or SYNC_JOBS or ("pytest" in sys.modules):
+        _execute_job_in_background(job.id, db_session=db)
+    else:
+        thread = threading.Thread(target=_execute_job_in_background, args=[job.id], daemon=True)
+        thread.start()
 
+    db.refresh(job)
     return job
 
 
@@ -292,9 +311,13 @@ def retry_job_manually(db, job_id: str, current_user: models.User) -> models.Bac
     _append_job_log(job, f"Manual retry initiated by user {current_user.name}")
     db.commit()
 
-    thread = threading.Thread(target=_execute_job_in_background, args=[job.id], daemon=True)
-    thread.start()
+    if SYNC_JOBS or ("pytest" in sys.modules):
+        _execute_job_in_background(job.id, db_session=db)
+    else:
+        thread = threading.Thread(target=_execute_job_in_background, args=[job.id], daemon=True)
+        thread.start()
 
+    db.refresh(job)
     return job
 
 

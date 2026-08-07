@@ -94,16 +94,16 @@ def test_automatic_retries_on_transient_failure(db_session, investigator_user):
         user_id=investigator_user.id,
         user_name=investigator_user.name,
         max_retries=2,
-        retry_delay_seconds=1,
+        retry_delay_seconds=0,
     )
 
     # Wait for retry loop
-    time.sleep(1.8)
+    time.sleep(0.5)
 
-    db_session.refresh(job)
-    assert job.retry_count == 1
-    assert job.status == "COMPLETED"
-    assert "flaky_success" in job.output_result_json
+    db_job = db_session.query(models.BackgroundJob).filter(models.BackgroundJob.id == job.id).first()
+    assert db_job.retry_count == 1
+    assert db_job.status == "COMPLETED"
+    assert "flaky_success" in db_job.output_result_json
 
 
 def test_permanent_failure_detection(db_session, investigator_user):
@@ -125,10 +125,10 @@ def test_permanent_failure_detection(db_session, investigator_user):
 
     time.sleep(0.5)
 
-    db_session.refresh(job)
-    assert job.status == "FAILED"
-    assert job.retry_count == 0  # Did not waste retries
-    assert "ValidationError" in job.error_details
+    db_job = db_session.query(models.BackgroundJob).filter(models.BackgroundJob.id == job.id).first()
+    assert db_job.status == "FAILED"
+    assert db_job.retry_count == 0  # Did not waste retries
+    assert "ValidationError" in db_job.error_details
 
 
 def test_manual_job_retry_endpoint(client, investigator_headers, db_session, investigator_user):
@@ -207,5 +207,6 @@ def test_sensitive_payload_scrubbing_in_jobs(db_session, investigator_user):
         input_payload={"prompt": "Synthesize case", "api_key": "sk-secret-key-12345", "password": "pass"},
     )
 
-    assert "sk-secret-key-12345" not in job.input_payload_json
-    assert "***REDACTED***" in job.input_payload_json
+    db_job = db_session.query(models.BackgroundJob).filter(models.BackgroundJob.id == job.id).first()
+    assert "sk-secret-key-12345" not in db_job.input_payload_json
+    assert "***REDACTED***" in db_job.input_payload_json

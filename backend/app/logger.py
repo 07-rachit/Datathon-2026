@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 
 SENSITIVE_KEYS = {
     "password", "hashed_password", "token", "access_token",
-    "secret", "jwt_secret_key", "authorization", "jwt",
-    "caste_id", "religion_id", "caste_name", "religion_name"
+    "secret", "secret_key", "api_key", "apikey", "jwt_secret_key",
+    "authorization", "jwt", "caste_id", "religion_id", "caste_name", "religion_name"
 }
 
 
