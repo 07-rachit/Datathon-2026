@@ -10,7 +10,7 @@ from app.database import Base, engine, SessionLocal
 from app.routers import (
     auth, cases, dashboard, export, chat, network,
     audit, offenders, analytics, finance, masters,
-    fir, collaboration, notifications
+    fir, collaboration, notifications, citizen_reports
 )
 from app.routers import admin as admin_router
 from app.routers import import_csv
@@ -93,6 +93,7 @@ app.include_router(masters.router)
 app.include_router(fir.router)
 app.include_router(collaboration.router)
 app.include_router(notifications.router)
+app.include_router(citizen_reports.router)
 
 
 @app.get("/")

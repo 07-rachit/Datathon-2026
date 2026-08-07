@@ -86,6 +86,24 @@ def _deep_search(db: Session, query: str, top_k: int = 8) -> Tuple[List[Any], Li
     if not found_phones and not phone_matches:
         reasoning_steps.append("No phone numbers identified in query string")
 
+    # Step 2b: Suspect / Person Name lookup
+    query_words = [w.lower() for w in re.findall(r"\w+", query) if w.lower() not in STOP_WORDS and len(w) > 2]
+    for word in query_words:
+        like_pattern = f"%{word}%"
+        persons = db.query(models.Person).filter(
+            or_(
+                models.Person.name.ilike(like_pattern),
+                models.Person.notes.ilike(like_pattern),
+                models.Person.mo_tags.ilike(like_pattern),
+            )
+        ).all()
+        for p in persons:
+            reasoning_steps.append(f"Matched person/suspect record '{p.name}' (Role: {p.role_in_case or 'N/A'}) in database")
+            for chunk in rag.get_case_chunks(p.case_id):
+                if chunk.chunk_id not in seen_chunk_ids:
+                    seen_chunk_ids.add(chunk.chunk_id)
+                    combined.append((chunk, 0.98, "direct_case_id"))
+
     # Step 3: Broad TF-IDF similarity search
     tfidf_hits = rag.retrieve(query, top_k=top_k)
     if tfidf_hits:

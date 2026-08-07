@@ -66,6 +66,7 @@ def map_cases(
     district: Optional[str] = None,
     crime_type: Optional[str] = None,
     status: Optional[models.CaseStatus] = None,
+    severity: Optional[models.Severity] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
@@ -78,7 +79,10 @@ def map_cases(
         query = query.filter(models.Case.crime_type == crime_type)
     if status:
         query = query.filter(models.Case.status == status)
+    if severity:
+        query = query.filter(models.Case.severity == severity)
     return query.all()
+
 
 
 @router.get("/{case_id}")

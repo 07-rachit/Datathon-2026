@@ -8,11 +8,12 @@ import ChatWidget from "./ChatWidget.jsx";
 const NAV = [
   { to: "/", label: "Dashboard", code: "01" },
   { to: "/cases", label: "Case Search", code: "02" },
-  { to: "/map", label: "Hotspot Map", code: "03" },
-  { to: "/network", label: "Network Graph", code: "04" },
-  { to: "/assistant", label: "AI Assistant", code: "05" },
-  { to: "/my-work", label: "My Work", code: "06", hasBadge: true },
-  { to: "/audit", label: "Audit Trail", code: "07" },
+  { to: "/citizen-reports", label: "Citizen Reports", code: "03" },
+  { to: "/map", label: "Hotspot Map", code: "04" },
+  { to: "/network", label: "Network Graph", code: "05" },
+  { to: "/assistant", label: "AI Assistant", code: "06" },
+  { to: "/my-work", label: "My Work", code: "07", hasBadge: true },
+  { to: "/audit", label: "Audit Trail", code: "08" },
 ];
 
 export default function Layout({ children }) {
