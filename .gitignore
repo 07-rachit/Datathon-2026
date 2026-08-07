@@ -45,3 +45,10 @@ coverage.xml
 
 # ─── Alembic ─────────────────────────────────────────────────────────────────
 backend/alembic/versions/*.pyc
+
+# ─── Misc runtime / temp ─────────────────────────────────────────────────────
+.mypy_cache/
+*.ipynb_checkpoints/
+*.pid
+backend/uploads/
+backend/*.log
