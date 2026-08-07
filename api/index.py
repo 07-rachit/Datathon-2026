@@ -10,4 +10,6 @@ backend_dir = os.path.join(os.path.dirname(__file__), "..", "backend")
 sys.path.insert(0, os.path.abspath(backend_dir))
 
 # Vercel's Python runtime natively supports ASGI — just export the FastAPI `app`
-from app.main import app
+from app.main import app, ensure_db_initialized
+
+ensure_db_initialized()

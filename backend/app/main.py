@@ -27,9 +27,8 @@ from app.middleware import (
 from app.activity_logger import ActivityLoggingMiddleware
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Create DB tables and seed demo RBAC users safely on startup."""
+def ensure_db_initialized():
+    """Create DB tables and seed demo RBAC users & cases safely."""
     try:
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
@@ -61,14 +60,11 @@ async def lifespan(app: FastAPI):
                 )
                 db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
                 db.commit()
-                print("--> Seeded default demo RBAC users (Admin@123).")
 
-            # Check if cases need initial seeding
             if db.query(models.Case).first() is None:
                 try:
                     from seed import seed_all
                     seed_all(db)
-                    print("--> Seeded initial cases & intelligence data.")
                 except Exception as s_err:
                     print(f"--> Auto-seed cases notice: {s_err}")
         except Exception as seed_err:
@@ -77,6 +73,16 @@ async def lifespan(app: FastAPI):
             db.close()
     except Exception as db_err:
         print(f"--> DB init notice: {db_err}")
+
+
+# Ensure DB tables exist on import/serverless startup
+ensure_db_initialized()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create DB tables and seed demo RBAC users safely on startup."""
+    ensure_db_initialized()
     yield
 
 

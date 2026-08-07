@@ -20,11 +20,12 @@ import Observability from "./pages/Observability.jsx";
 import Workflows from "./pages/Workflows.jsx";
 import Layout from "./components/Layout.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
-import { getCurrentUser } from "./lib/api.js";
+import { getCurrentUser, getToken } from "./lib/api.js";
 
 function ProtectedRoute({ children }) {
   const user = getCurrentUser();
-  if (!user) return <Navigate to="/login" replace />;
+  const token = getToken();
+  if (!user || !token) return <Navigate to="/login" replace />;
   return children;
 }
 

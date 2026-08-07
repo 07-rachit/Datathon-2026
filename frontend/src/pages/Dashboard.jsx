@@ -30,7 +30,14 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardStats()
       .then(setStats)
-      .catch(() => setError("Could not load dashboard data. Is the API running?"));
+      .catch((err) => {
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          logout();
+          window.location.href = "/login";
+        } else {
+          setError("Could not load dashboard data. Is the API running?");
+        }
+      });
     fetchPredictions()
       .then(setPredictions)
       .catch(() => {});
