@@ -30,19 +30,30 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
+import hashlib
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password:
+        return False
     try:
         if hashed_password.startswith("plain:"):
             return plain_password == hashed_password.split("plain:", 1)[1]
+        if hashed_password.startswith("sha256:"):
+            expected = hashlib.sha256(plain_password.encode()).hexdigest()
+            return hashed_password.split("sha256:", 1)[1] == expected
         return pwd_context.verify(plain_password, hashed_password)
     except Exception:
-        return plain_password == hashed_password or hashed_password == f"plain:{plain_password}"
+        # Fallback check for plain or sha256
+        sha256_hash = hashlib.sha256(plain_password.encode()).hexdigest()
+        return plain_password == hashed_password or hashed_password in [f"plain:{plain_password}", f"sha256:{sha256_hash}"]
 
 
 def hash_password(password: str) -> str:
     try:
         return pwd_context.hash(password)
     except Exception as e:
+        print(f"--> Password hash fallback to sha256: {e}")
+        return "sha256:" + hashlib.sha256(password.encode()).hexdigest()
         print(f"--> Password hash fallback notice: {e}")
         return f"plain:{password}"
 
