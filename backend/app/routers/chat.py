@@ -105,14 +105,15 @@ def _deep_search(db: Session, query: str, top_k: int = 8) -> Tuple[List[Any], Li
                     combined.append((chunk, 0.98, "direct_case_id"))
 
     # Step 3: Broad TF-IDF similarity search
-    # rag.retrieve() returns List[Chunk] (plain objects, not tuples)
+    # rag.retrieve() returns List[Tuple[Chunk, float]]
     tfidf_hits = rag.retrieve(query, top_k=top_k)
     if tfidf_hits:
-        reasoning_steps.append(f"Retrieved {len(tfidf_hits)} related case chunks via TF-IDF vector similarity")
-        for chunk in tfidf_hits:
+        top_score = round(tfidf_hits[0][1], 3)
+        reasoning_steps.append(f"Retrieved {len(tfidf_hits)} related case chunks via TF-IDF vector similarity (top score: {top_score})")
+        for chunk, score in tfidf_hits:
             if chunk.chunk_id not in seen_chunk_ids:
                 seen_chunk_ids.add(chunk.chunk_id)
-                combined.append((chunk, 0.9, "similarity"))
+                combined.append((chunk, score, "similarity"))
     else:
         reasoning_steps.append("TF-IDF similarity search yielded 0 matching chunks")
 
