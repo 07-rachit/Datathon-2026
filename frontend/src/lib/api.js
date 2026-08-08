@@ -22,6 +22,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Parses standardized backend error response envelope ({ error: { code, message, details } })
+ * or FastAPI detail response string into clean user-friendly object.
+ */
 export function formatApiError(error) {
   if (!error) return { message: "An unexpected error occurred.", details: [] };
   if (error.response && error.response.data) {
