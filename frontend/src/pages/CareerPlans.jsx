@@ -140,7 +140,9 @@ export default function CareerPlans() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-amber hover:bg-amber/90 font-mono font-bold text-xs px-4 py-2.5 rounded text-base shadow transition flex items-center gap-2 self-start md:self-auto"
+          aria-label="Create New Career Plan"
+          title="Open modal dialog to define a new learning career plan"
+          className="bg-amber hover:bg-amber/90 font-mono font-bold text-xs px-4 py-2.5 rounded text-base shadow transition flex items-center gap-2 self-start md:self-auto cursor-pointer"
         >
           <span>🎯</span> Create Career Plan
         </button>
