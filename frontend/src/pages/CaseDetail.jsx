@@ -323,7 +323,7 @@ export default function CaseDetail() {
   const cs = caseData.chargesheet;
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 md:p-8 max-w-5xl space-y-6">
       <Link to="/cases" className="text-muted text-xs font-mono hover:text-teal transition">
         ← BACK TO CASE SEARCH
       </Link>
