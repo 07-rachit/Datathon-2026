@@ -18,6 +18,7 @@ import ActivityHistory from "./pages/ActivityHistory.jsx";
 import JobCenter from "./pages/JobCenter.jsx";
 import Observability from "./pages/Observability.jsx";
 import Workflows from "./pages/Workflows.jsx";
+import CareerPlans from "./pages/CareerPlans.jsx";
 import Layout from "./components/Layout.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
 import { getCurrentUser, getToken } from "./lib/api.js";
@@ -54,6 +55,7 @@ export default function App() {
                   <Route path="/jobs" element={<JobCenter />} />
                   <Route path="/observability" element={<Observability />} />
                   <Route path="/workflows" element={<Workflows />} />
+                  <Route path="/career-plans" element={<CareerPlans />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/import" element={<Import />} />
                   <Route path="/offenders" element={<Offenders />} />

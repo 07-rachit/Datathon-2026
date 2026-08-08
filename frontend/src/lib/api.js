@@ -111,6 +111,33 @@ export async function fetchSimilarCases(caseId) {
   return data;
 }
 
+// ── Career Plans & Learning Search ──────────────────────────────────────────
+
+export async function fetchCareerPlans(params = {}) {
+  const { data } = await api.get("/career-plans", { params });
+  return data;
+}
+
+export async function fetchCareerPlan(planId) {
+  const { data } = await api.get(`/career-plans/${planId}`);
+  return data;
+}
+
+export async function createCareerPlan(payload) {
+  const { data } = await api.post("/career-plans", payload);
+  return data;
+}
+
+export async function updateCareerPlan(planId, payload) {
+  const { data } = await api.put(`/career-plans/${planId}`, payload);
+  return data;
+}
+
+export async function deleteCareerPlan(planId) {
+  const { data } = await api.delete(`/career-plans/${planId}`);
+  return data;
+}
+
 export async function fetchNetworkGraph(params = {}) {
   const { data } = await api.get("/network/graph", { params });
   return data;

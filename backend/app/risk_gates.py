@@ -223,3 +223,17 @@ def check_investigation_label_update_gate(
         raise ValidationError("Investigator note cannot exceed 1000 characters")
 
     return case
+
+
+def check_career_plan_search_gate(
+    user: models.User, page: int, page_size: int, sort_by: str
+) -> None:
+    if page < 1:
+        raise ValidationError("Page number must be greater than or equal to 1")
+
+    if page_size < 1 or page_size > 100:
+        raise ValidationError("Page size must be between 1 and 100")
+
+    allowed_sort = ["newest", "oldest", "deadline", "alphabetical"]
+    if sort_by and sort_by.lower() not in allowed_sort:
+        raise ValidationError(f"Invalid sort parameter. Allowed values: {', '.join(allowed_sort)}")

@@ -812,7 +812,175 @@ db.add_all([ev2_1, ev2_2])
 db.commit()
 print("--> Seeded Citizen Crime Reports and attached evidence items.")
 
-# ── 12. Rebuild RAG Search Index ─────────────────────────────────────────────
+# ── 12. Seed Career Plans & Learning Records ─────────────────────────────────
+
+def seed_career_plans(session):
+    if session.query(models.CareerPlan).first() is not None:
+        return
+
+    admin_u = session.query(models.User).filter(models.User.email == "admin@crimeintel.local").first()
+    analyst_u = session.query(models.User).filter(models.User.email == "analyst@crimeintel.local").first()
+    investigator_u = session.query(models.User).filter(models.User.email == "investigator@crimeintel.local").first()
+
+    admin_id = admin_u.id if admin_u else "user-admin-demo-001"
+    analyst_id = analyst_u.id if analyst_u else "user-analyst-demo-001"
+    investigator_id = investigator_u.id if investigator_u else "user-investigator-demo-001"
+
+    now = datetime.utcnow()
+
+    plans_data = [
+        {
+            "id": "cp_001",
+            "user_id": analyst_id,
+            "title": "Mastering Digital Forensics & Mobile Artifact Extraction",
+            "description": "Comprehensive learning path covering FTK Imager, Autopsy, and Android/iOS physical memory dump analysis for cyber crime investigations.",
+            "topic": "Cyber Forensics",
+            "difficulty_level": "Advanced",
+            "target_goal": "Certified Digital Forensics Examiner (CDFE)",
+            "deadline": now + timedelta(days=45),
+            "tags": "forensics, autopsy, mobile, memory_analysis, ftk",
+            "status": "active",
+            "milestones": "1. FTK Disk Imaging Basics\n2. RAM Dump Volatility Analysis\n3. Mobile SQLite Database Extraction\n4. Final Capstone Report",
+            "notes": "Focused on digital evidence chain of custody and court admissible reports.",
+        },
+        {
+            "id": "cp_002",
+            "user_id": investigator_id,
+            "title": "Financial Crime & Money Laundering Trail Audit",
+            "description": "Specialized training on tracking mule account networks, shell company balance sheets, SWIFT wire routing, and crypto wallet clustering.",
+            "topic": "Financial Intelligence",
+            "difficulty_level": "Intermediate",
+            "target_goal": "Senior Financial Intelligence Analyst",
+            "deadline": now + timedelta(days=60),
+            "tags": "aml, mule_accounts, banking, crypto, forensic_accounting",
+            "status": "active",
+            "milestones": "1. Banking Ledger Parsing\n2. Benford Law Fraud Analysis\n3. Blockchain Explorer Tracking\n4. Asset Seizure Dossier",
+            "notes": "Prerequisite for high-value financial seizure authorization requests.",
+        },
+        {
+            "id": "cp_003",
+            "user_id": analyst_id,
+            "title": "Crime Data Science & Predictive Analytics",
+            "description": "Learn Python, Pandas, Spatial GIS mapping, and time-series clustering for automated hotspot and seasonal crime forecasting.",
+            "topic": "Data Analytics",
+            "difficulty_level": "Intermediate",
+            "target_goal": "Crime Data Science Specialist",
+            "deadline": now + timedelta(days=90),
+            "tags": "python, pandas, gis, predictive_modeling, machine_learning",
+            "status": "active",
+            "milestones": "1. Python Data Wrangling\n2. QGIS Crime Heatmaps\n3. Seasonal ARIMA Forecasting\n4. Automated Dashboard Pipeline",
+            "notes": "Integrates directly with CrimeIntel Platform Analytics module.",
+        },
+        {
+            "id": "cp_004",
+            "user_id": investigator_id,
+            "title": "Open Source Intelligence (OSINT) & Social Network Analysis",
+            "description": "Master advanced Google dorking, dark web forum monitoring, metadata extraction, and social network link visualization.",
+            "topic": "OSINT & Digital Recon",
+            "difficulty_level": "Beginner",
+            "target_goal": "OSINT Intelligence Master",
+            "deadline": now + timedelta(days=20),
+            "tags": "osint, dorking, maltego, metadata, darkweb",
+            "status": "active",
+            "milestones": "1. Advanced Search Operators\n2. EXIF & Geolocation Parsing\n3. Maltego Entity Mapping\n4. Darknet Forum Scraping",
+            "notes": "Essential skill for initial threat actor identification.",
+        },
+        {
+            "id": "cp_005",
+            "user_id": admin_id,
+            "title": "Executive Law Enforcement Leadership & Crisis Operations",
+            "description": "Leadership development plan covering multi-agency incident command, risk governance, strategic resource allocation, and policy reform.",
+            "topic": "Leadership & Management",
+            "difficulty_level": "Expert",
+            "target_goal": "Law Enforcement Leadership Fellow",
+            "deadline": now + timedelta(days=120),
+            "tags": "leadership, incident_command, governance, strategy",
+            "status": "active",
+            "milestones": "1. Strategic Planning Frameworks\n2. Inter-agency Taskforce Protocol\n3. Crisis Communication Workshop\n4. Executive Simulation Evaluation",
+            "notes": "Geared towards senior police administrators and station chiefs.",
+        },
+        {
+            "id": "cp_006",
+            "user_id": investigator_id,
+            "title": "Bharatiya Nyaya Sanhita (BNS) & Procedural Law Transition",
+            "description": "Detailed study of new statutory criminal codes, electronic evidence admissibility rules, and chargesheet drafting standards.",
+            "topic": "Criminal Law & Procedure",
+            "difficulty_level": "Intermediate",
+            "target_goal": "Legal Compliance & Prosecution Liaison Specialist",
+            "deadline": now + timedelta(days=30),
+            "tags": "bns, procedural_law, electronic_evidence, chargesheet, ipc",
+            "status": "active",
+            "milestones": "1. BNS vs IPC Comparative Review\n2. Section 63B Electronic Record Certification\n3. Mandatory Arrest Timelines\n4. Mock Court Cross-Examination",
+            "notes": "Ensures all case files withstand judicial scrutiny.",
+        },
+        {
+            "id": "cp_007",
+            "user_id": analyst_id,
+            "title": "Cloud Security & Serverless Threat Investigation",
+            "description": "Investigating cloud infrastructure breaches, AWS/Azure log analysis, serverless container forensics, and IAM privilege escalation.",
+            "topic": "Cyber Forensics",
+            "difficulty_level": "Expert",
+            "target_goal": "Certified Digital Forensics Examiner (CDFE)",
+            "deadline": now + timedelta(days=150),
+            "tags": "cloud, aws, azure, docker, cloud_forensics",
+            "status": "active",
+            "milestones": "1. CloudTrail & GuardDuty Log Analysis\n2. Docker Snapshot Imaging\n3. IAM Policy Auditing",
+            "notes": "Advanced track for cloud-native cyber warfare defense.",
+        },
+        {
+            "id": "cp_008",
+            "user_id": investigator_id,
+            "title": "Crypto Asset Tracking & Darknet Financial Analytics",
+            "description": "Bitcoin, Ethereum, and Monero transaction graph tracing, mixer de-anonymization, and exchange subpoena drafting.",
+            "topic": "Financial Intelligence",
+            "difficulty_level": "Advanced",
+            "target_goal": "Senior Financial Intelligence Analyst",
+            "deadline": now + timedelta(days=75),
+            "tags": "crypto, bitcoin, monero, mixer, chain_analysis",
+            "status": "active",
+            "milestones": "1. UTXO Graph Analysis\n2. CoinJoin De-mixing Heuristics\n3. Exchange KYC Subpoena Templates",
+            "notes": "Targeted at cryptocurrency theft and ransomware extortion cases.",
+        },
+        {
+            "id": "cp_009",
+            "user_id": analyst_id,
+            "title": "Geospatial Intelligence & Urban Crime Mapping",
+            "description": "ArcGIS & Folium mapping techniques for spatial autocorrelation, hot-spot kernel density estimation, and patrol route optimization.",
+            "topic": "Data Analytics",
+            "difficulty_level": "Beginner",
+            "target_goal": "Crime Data Science Specialist",
+            "deadline": now + timedelta(days=15),
+            "tags": "gis, folium, arcgis, spatial_analysis, heatmaps",
+            "status": "completed",
+            "milestones": "1. Shapefile & GeoJSON Handling\n2. KDE Hotspot Mapping\n3. Patrol Route Optimizing Algorithms",
+            "notes": "Completed initial certification in GIS analytics.",
+        },
+        {
+            "id": "cp_010",
+            "user_id": investigator_id,
+            "title": "Tactical OSINT & Mobile Reconnaissance",
+            "description": "Field OSINT techniques using burner devices, cellular tower triangulations, and public Wi-Fi probe parsing.",
+            "topic": "OSINT & Digital Recon",
+            "difficulty_level": "Intermediate",
+            "target_goal": "OSINT Intelligence Master",
+            "deadline": now + timedelta(days=10),
+            "tags": "osint, mobile_recon, wifi, cell_tower, field_tactics",
+            "status": "active",
+            "milestones": "1. WiGLE Probe Mapping\n2. CDR Tower Triangulation\n3. Tactical Field Kit Assembly",
+            "notes": "High priority for rapid response teams.",
+        },
+    ]
+
+    for p_dict in plans_data:
+        plan_obj = models.CareerPlan(**p_dict)
+        session.add(plan_obj)
+
+    session.commit()
+    print("--> Seeded 10 demonstration Career Plans & Learning records.")
+
+seed_career_plans(db)
+
+# ── 13. Rebuild RAG Search Index ─────────────────────────────────────────────
 
 indexed_count = rag.build_index(db)
 print(f"--> Rebuilt RAG TF-IDF Search Index with {indexed_count} total evidence chunks.")

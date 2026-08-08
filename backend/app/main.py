@@ -12,7 +12,7 @@ from app.database import Base, engine, SessionLocal
 from app.routers import (
     auth, cases, dashboard, export, chat, network,
     audit, offenders, analytics, finance, masters,
-    fir, collaboration, notifications, citizen_reports, activity, jobs, observability, workflows
+    fir, collaboration, notifications, citizen_reports, activity, jobs, observability, workflows, career_plans
 )
 from app.routers import admin as admin_router
 from app.routers import import_csv
@@ -97,6 +97,13 @@ def ensure_db_initialized():
                     seed_all(db)
                 except Exception as s_err:
                     print(f"--> Auto-seed cases notice: {s_err}")
+
+            if db.query(models.CareerPlan).first() is None:
+                try:
+                    from seed import seed_career_plans
+                    seed_career_plans(db)
+                except Exception as cp_err:
+                    print(f"--> Auto-seed career plans notice: {cp_err}")
         except Exception as seed_err:
             print(f"--> Demo user seed notice: {seed_err}")
         finally:
@@ -150,6 +157,7 @@ app.include_router(activity.router)
 app.include_router(jobs.router)
 app.include_router(observability.router)
 app.include_router(workflows.router)
+app.include_router(career_plans.router)
 app.include_router(admin_router.router)
 app.include_router(import_csv.router)
 app.include_router(offenders.router)

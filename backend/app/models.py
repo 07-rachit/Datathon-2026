@@ -41,6 +41,13 @@ class InvestigationLabelEnum(str, enum.Enum):
     unreviewed = "Unreviewed"
 
 
+class DifficultyLevelEnum(str, enum.Enum):
+    beginner = "Beginner"
+    intermediate = "Intermediate"
+    advanced = "Advanced"
+    expert = "Expert"
+
+
 # ─── Reference / Lookup Master Tables (Sprint 3 KSP FIR Alignment) ──────────
 
 class CaseCategoryMaster(Base):
@@ -898,5 +905,26 @@ class ReportEvidence(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     report = relationship("CitizenReport", back_populates="evidence_items")
+
+
+class CareerPlan(Base):
+    __tablename__ = "career_plans"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    topic = Column(String, nullable=False, index=True)
+    difficulty_level = Column(String, default="Intermediate", index=True)
+    target_goal = Column(String, nullable=False, index=True)
+    deadline = Column(DateTime, nullable=True, index=True)
+    tags = Column(String, nullable=True, index=True)
+    status = Column(String, default="active", index=True)
+    milestones = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    owner = relationship("User")
 
 

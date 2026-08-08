@@ -18,6 +18,7 @@ const NAV = [
   { to: "/jobs", label: "Job Center", code: "10" },
   { to: "/observability", label: "Observability", code: "11" },
   { to: "/workflows", label: "Workflows & Approvals", code: "12" },
+  { to: "/career-plans", label: "Career Plans & Learning", code: "13" },
 ];
 
 export default function Layout({ children }) {

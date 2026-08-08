@@ -1134,6 +1134,88 @@ class WorkflowListResponse(BaseModel):
     results: List[WorkflowOut]
 
 
+class DifficultyLevelEnum(str, Enum):
+    beginner = "Beginner"
+    intermediate = "Intermediate"
+    advanced = "Advanced"
+    expert = "Expert"
+
+
+class CareerPlanCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    topic: str
+    difficulty_level: DifficultyLevelEnum = DifficultyLevelEnum.intermediate
+    target_goal: str
+    deadline: Optional[datetime] = None
+    tags: Optional[str] = None
+    status: Optional[str] = "active"
+    milestones: Optional[str] = None
+    notes: Optional[str] = None
+
+    @field_validator("title")
+    @classmethod
+    def title_valid(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v or len(v) > 200:
+            raise ValueError("Title must be 1–200 characters long")
+        return v
+
+    @field_validator("topic", "target_goal")
+    @classmethod
+    def short_text_valid(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v or len(v) > 100:
+            raise ValueError("Field must be 1–100 characters long")
+        return v
+
+
+class CareerPlanUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    topic: Optional[str] = None
+    difficulty_level: Optional[DifficultyLevelEnum] = None
+    target_goal: Optional[str] = None
+    deadline: Optional[datetime] = None
+    tags: Optional[str] = None
+    status: Optional[str] = None
+    milestones: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class CareerPlanOut(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    description: Optional[str] = None
+    topic: str
+    difficulty_level: str
+    target_goal: str
+    deadline: Optional[datetime] = None
+    tags: Optional[str] = None
+    status: str
+    milestones: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    owner_name: Optional[str] = None
+    owner_email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CareerPlanListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[CareerPlanOut]
+    available_topics: List[str] = []
+    available_goals: List[str] = []
+    available_difficulties: List[str] = []
+
+
 
 
 
