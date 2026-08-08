@@ -138,8 +138,8 @@ class InvestigationLabelEnum(str, Enum):
 
 
 class CaseInvestigationUpdate(BaseModel):
-    label: InvestigationLabelEnum
-    note: str
+    label: InvestigationLabelEnum = Field(..., description="Investigation label: Suspected, Verified, or Needs Review")
+    note: str = Field(..., description="Mandatory investigator reasoning note (3-1000 characters)")
 
     @field_validator("label")
     @classmethod
