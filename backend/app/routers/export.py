@@ -56,6 +56,10 @@ def _build_pdf_styles():
 
 
 def _generate_case_pdf(case: models.Case, current_user: models.User) -> io.BytesIO:
+    """
+    Generates a professionally formatted A4 PDF security case briefing document.
+    Populates case metadata, investigation label callout, evidence log, and audit timeline.
+    """
     styles = _build_pdf_styles()
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
