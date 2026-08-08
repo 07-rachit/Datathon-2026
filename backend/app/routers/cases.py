@@ -1,9 +1,9 @@
 """
-Case management CRUD endpoints.
+Case management CRUD endpoints and role-scoped query interfaces.
 
-Provides full lifecycle management for crime cases including creation,
-listing with pagination, detail retrieval, status updates, and phone
-number masking based on user role (RBAC).
+Provides full lifecycle management for security crime cases including creation,
+listing with role-aware scoping, detail retrieval, status updates, investigation
+label reviews, and phone number masking based on user role (RBAC).
 """
 from typing import Optional, Union, List, Dict, Any
 from datetime import datetime
