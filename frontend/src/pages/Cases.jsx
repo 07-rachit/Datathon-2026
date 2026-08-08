@@ -240,11 +240,13 @@ export default function Cases() {
               </tr>
             ) : data.results.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center space-y-2">
-                  <p className="text-muted font-mono">No security case records match this role scope and filter criteria.</p>
+                <td colSpan={7} className="py-12 text-center space-y-3">
+                  <div className="text-3xl">📁</div>
+                  <p className="text-muted font-mono text-xs">No security case records match this role scope and filter criteria.</p>
                   <button
                     onClick={() => { setRoleScope("all"); setQ(""); setStatus(""); setSeverity(""); setInvestigationLabel(""); }}
-                    className="bg-amber text-base font-mono font-bold text-xs px-4 py-2 rounded shadow hover:bg-amber/90"
+                    title="Reset all filters to view full admin list of security cases"
+                    className="bg-amber text-base font-mono font-bold text-xs px-4 py-2 rounded shadow hover:bg-amber/90 transition cursor-pointer"
                   >
                     🔄 Clear Filters & Reset to Admin Overview
                   </button>
