@@ -14,6 +14,11 @@ from datetime import datetime
 from app import models
 
 
+def _validate_label_payload(data, expected_label, expected_note):
+    assert data["current_label"] == expected_label, f"Expected label {expected_label}, got {data['current_label']}"
+    assert data["investigator_note"] == expected_note, "Investigator note mismatch"
+
+
 def test_investigation_label_update_success(client, db_session, investigator_headers):
     """Test authorized investigator updating investigation label and note."""
     case = models.Case(
