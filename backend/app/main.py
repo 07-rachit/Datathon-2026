@@ -130,7 +130,12 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Crime Intelligence Platform API", version="0.4.0", lifespan=lifespan)
+app = FastAPI(
+    title="Crime Intelligence Platform API",
+    description="Enterprise Security Case Management, Role-Aware Scoping, Multi-Format Exports (PDF/HTML/CSV), Investigation Review Labels, and RAG Intelligence Desk API.",
+    version="0.4.0",
+    lifespan=lifespan,
+)
 
 app.state.limiter = limiter
 
