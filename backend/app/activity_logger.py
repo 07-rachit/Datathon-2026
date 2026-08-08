@@ -44,9 +44,11 @@ def record_activity(
     status: str = "success",
     tags: Optional[List[str]] = None,
     related_resources: Optional[List[Dict[str, Any]]] = None,
-    execution_duration_ms: Optional[float] = None,
 ) -> models.ActivityHistory:
-    """Record an activity record into persistent database history."""
+    """
+    Record an immutable activity log entry into persistent database history.
+    Automatically scrubs sensitive data fields before JSON serialization.
+    """
     sanitized_meta = sanitize_data(metadata or {})
     sanitized_res = sanitize_data(related_resources or [])
     
