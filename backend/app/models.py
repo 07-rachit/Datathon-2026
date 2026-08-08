@@ -547,6 +547,8 @@ class ActivityHistory(Base):
     """
     Centralized Persistent Activity History model.
     Stores comprehensive event logs for AI outputs, twin/case edits, agent runs,
+    """
+    Immutable audit log storing platform events, export activities, risk gate failures,
     intake validations, citizen report actions, tasks, and workflow decisions.
     """
     __tablename__ = "activity_history"
