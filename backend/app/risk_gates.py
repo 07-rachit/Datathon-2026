@@ -237,3 +237,22 @@ def check_career_plan_search_gate(
     allowed_sort = ["newest", "oldest", "deadline", "alphabetical"]
     if sort_by and sort_by.lower() not in allowed_sort:
         raise ValidationError(f"Invalid sort parameter. Allowed values: {', '.join(allowed_sort)}")
+
+
+def check_report_export_gate(
+    db: Session, case_id: str, format_str: str, user: models.User
+) -> models.Case:
+    check_role_authorization(user, [models.RoleEnum.investigator, models.RoleEnum.analyst, models.RoleEnum.admin])
+
+    allowed_formats = ["pdf", "html", "csv"]
+    if not format_str or format_str.lower().strip() not in allowed_formats:
+        raise ValidationError(f"Unsupported export format '{format_str}'. Supported formats: {', '.join(allowed_formats)}")
+
+    case = db.query(models.Case).filter(models.Case.id == case_id).first()
+    if not case:
+        case = db.query(models.Case).filter(models.Case.case_id == case_id).first()
+
+    if not case:
+        raise ResourceNotFoundError(f"Security Case with ID '{case_id}' was not found")
+
+    return case

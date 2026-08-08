@@ -17,6 +17,7 @@ import api, {
   fetchOfficers,
   fetchCaseInvestigation,
   updateCaseInvestigation,
+  exportCaseReport,
   getCurrentUser,
 } from "../lib/api.js";
 
@@ -168,20 +169,34 @@ export default function CaseDetail() {
     fetchOfficers().then(setOfficers).catch(() => setOfficers([]));
   }
 
-  async function handleExport() {
+  // Export Modal State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState("pdf");
+  const [exportError, setExportError] = useState("");
+  const [exportSuccessMsg, setExportSuccessMsg] = useState("");
+
+  async function handleExecuteExport(formatToUse) {
+    const fmt = formatToUse || exportFormat;
     setExporting(true);
+    setExportError("");
     try {
-      const response = await api.get(`/export/cases/${id}/report`, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const response = await exportCaseReport(id, fmt);
+      const blob = new Blob([response.data], { type: response.headers["content-type"] });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${caseData.case_id}_report.pdf`);
+      const nowStr = new Date().toISOString().slice(0, 19).replace(/[^0-9]/g, "");
+      const fileName = `SecurityCase_${caseData?.case_id || 'REPORT'}_${nowStr}.${fmt}`;
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      setShowExportModal(false);
+      setExportSuccessMsg(`Security case report exported successfully in ${fmt.toUpperCase()} format.`);
+      setTimeout(() => setExportSuccessMsg(""), 6000);
     } catch (err) {
-      setError("Could not generate the PDF report.");
+      setExportError(err.response?.data?.error?.message || err.response?.data?.detail || "Could not generate case report.");
     } finally {
       setExporting(false);
     }
@@ -326,17 +341,23 @@ export default function CaseDetail() {
           <h2 className="font-display text-3xl text-ink">{caseData.title}</h2>
         </div>
         <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="bg-amber text-base font-semibold rounded px-4 py-2 text-sm hover:brightness-110 transition disabled:opacity-50 whitespace-nowrap"
+          onClick={() => setShowExportModal(true)}
+          className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2.5 rounded shadow transition flex items-center gap-2 whitespace-nowrap"
         >
-          {exporting ? "Generating..." : "⬇ Export PDF Report"}
+          <span>⬇</span> Export Case Report (PDF / HTML / CSV)
         </button>
       </div>
 
       {collabError && (
         <div className="mb-4 border border-crit/40 bg-crit/10 text-crit text-xs font-mono p-3 rounded">
           {collabError}
+        </div>
+      )}
+
+      {exportSuccessMsg && (
+        <div className="mb-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-xs font-mono p-3 rounded flex items-center justify-between">
+          <span>✓ {exportSuccessMsg}</span>
+          <button onClick={() => setExportSuccessMsg("")} className="text-muted hover:text-ink">✕</button>
         </div>
       )}
 
@@ -1119,6 +1140,105 @@ export default function CaseDetail() {
                 className="bg-amber hover:bg-amber/90 text-base font-semibold text-xs px-5 py-2 rounded shadow transition disabled:opacity-50"
               >
                 {investigationSubmitting ? "Saving..." : "Confirm & Save Update"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EXPORT SECURITY CASE REPORT MODAL ── */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-panel border border-line rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4 font-body relative">
+            <div className="flex justify-between items-center border-b border-line pb-3">
+              <h3 className="font-display text-lg text-ink">Export Security Case Report</h3>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="text-muted hover:text-ink text-sm font-mono"
+              >
+                ✕
+              </button>
+            </div>
+
+            {exportError && (
+              <div className="bg-crit/10 border border-crit/40 text-crit text-xs p-3 rounded font-mono">
+                {exportError}
+              </div>
+            )}
+
+            <p className="text-muted text-xs font-body leading-relaxed">
+              Select your desired export format. The generated report automatically populates all stored project metadata, investigation details, notes, evidence logs, suspect rosters, and audit timelines without data duplication.
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-mono text-muted uppercase mb-1">Choose Export Format *</label>
+
+              <button
+                type="button"
+                onClick={() => setExportFormat("pdf")}
+                className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition ${
+                  exportFormat === "pdf" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
+                }`}
+              >
+                <div>
+                  <p className="text-xs font-mono font-bold text-ink">📄 PDF Document (.pdf)</p>
+                  <p className="text-[11px] text-muted font-body mt-0.5">ReportLab formatted official briefing report with tables and badges.</p>
+                </div>
+                {exportFormat === "pdf" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExportFormat("html")}
+                className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition ${
+                  exportFormat === "html" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
+                }`}
+              >
+                <div>
+                  <p className="text-xs font-mono font-bold text-ink">🌐 Printable Web HTML (.html)</p>
+                  <p className="text-[11px] text-muted font-body mt-0.5">Interactive printable web page with responsive CSS styling & badges.</p>
+                </div>
+                {exportFormat === "html" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExportFormat("csv")}
+                className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition ${
+                  exportFormat === "csv" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
+                }`}
+              >
+                <div>
+                  <p className="text-xs font-mono font-bold text-ink">📊 Spreadsheet Data (.csv)</p>
+                  <p className="text-[11px] text-muted font-body mt-0.5">Structured CSV tables for Excel data analysis & auditing.</p>
+                </div>
+                {exportFormat === "csv" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-line">
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 rounded text-xs font-mono text-muted hover:text-ink transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={() => handleExecuteExport(exportFormat)}
+                className="bg-amber hover:bg-amber/90 font-mono font-bold text-xs px-5 py-2.5 rounded shadow transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {exporting ? (
+                  <>
+                    <span className="animate-spin text-xs">⏳</span> Generating {exportFormat.toUpperCase()}...
+                  </>
+                ) : (
+                  <>
+                    <span>⬇</span> Download {exportFormat.toUpperCase()}
+                  </>
+                )}
               </button>
             </div>
           </div>

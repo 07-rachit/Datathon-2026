@@ -111,6 +111,14 @@ export async function fetchSimilarCases(caseId) {
   return data;
 }
 
+export async function exportCaseReport(caseId, format = "pdf") {
+  const response = await api.get(`/export/cases/${caseId}/report`, {
+    params: { format },
+    responseType: "blob",
+  });
+  return response;
+}
+
 // ── Career Plans & Learning Search ──────────────────────────────────────────
 
 export async function fetchCareerPlans(params = {}) {

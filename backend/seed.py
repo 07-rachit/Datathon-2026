@@ -980,6 +980,95 @@ def seed_career_plans(session):
 
 seed_career_plans(db)
 
+
+def seed_sample_reviewed_case(session):
+    if session.query(models.Case).filter(models.Case.case_id == "CR-2026-9999").first() is not None:
+        return
+
+    admin_u = session.query(models.User).filter(models.User.email == "admin@crimeintel.local").first()
+    rev_id = admin_u.id if admin_u else "user-admin-demo-001"
+    rev_name = admin_u.name if admin_u else "Admin User (DGP Office)"
+
+    sample_case = models.Case(
+        id="case-sample-9999",
+        case_id="CR-2026-9999",
+        title="High-Risk Cyber-Financial Extortion Incident",
+        crime_type="Cyber & Financial Fraud",
+        district="Bengaluru Urban",
+        station_name="Cyber Crime PS Headquarters",
+        status=models.CaseStatus.under_review,
+        severity=models.Severity.critical,
+        incident_date=datetime(2026, 8, 1, 14, 30),
+        latitude=12.9716,
+        longitude=77.5946,
+        summary="Targeted spear-phishing campaign combined with ransomware deployment against state financial infrastructure. Attractors demanded 12.5 BTC ransom payment to prevent leak of confidential records.",
+        investigation_label=models.InvestigationLabelEnum.verified,
+        investigator_note="Forensic analysis of memory dumps and C2 network traffic confirms state-sponsored syndicate involvement. Key threat actor identified and bank account freezing initiated.",
+        reviewer_id=rev_id,
+        reviewer_name=rev_name,
+        review_timestamp=datetime(2026, 8, 5, 11, 0),
+        previous_investigation_label="Needs Review",
+    )
+    session.add(sample_case)
+    session.flush()
+
+    p1 = models.Person(
+        id="p_9999_1",
+        case_id=sample_case.id,
+        name="Rajesh Kumar",
+        role_in_case="Prime Suspect / Syndicate Handler",
+        phone_number="+91 98765 43210",
+    )
+    p2 = models.Person(
+        id="p_9999_2",
+        case_id=sample_case.id,
+        name="Vikram Singh",
+        role_in_case="Mule Account Holder",
+        phone_number="+91 91234 56789",
+    )
+    session.add_all([p1, p2])
+
+    e1 = models.Evidence(
+        id="e_9999_1",
+        case_id=sample_case.id,
+        description="Encrypted C2 Server Logs & Ransomware Executable Payload",
+        evidence_hash="a8f5f167f44f4964e6c998dee827110c",
+    )
+    e2 = models.Evidence(
+        id="e_9999_2",
+        case_id=sample_case.id,
+        description="Mule Bank Statement showing Rs. 45,00,000 illicit transfer",
+        evidence_hash="b7c3d2e1a4b5c6d7e8f90123456789aa",
+    )
+    session.add_all([e1, e2])
+
+    h1 = models.CaseInvestigationHistory(
+        id="hist_9999_1",
+        case_id=sample_case.id,
+        previous_label="Unreviewed",
+        new_label="Needs Review",
+        investigator_note="Initial triage flags suspicious high-volume BTC transfer pattern.",
+        reviewer_id=rev_id,
+        reviewer_name=rev_name,
+        created_at=datetime(2026, 8, 3, 9, 0),
+    )
+    h2 = models.CaseInvestigationHistory(
+        id="hist_9999_2",
+        case_id=sample_case.id,
+        previous_label="Needs Review",
+        new_label="Verified",
+        investigator_note="Forensic analysis of memory dumps and C2 network traffic confirms state-sponsored syndicate involvement. Key threat actor identified and bank account freezing initiated.",
+        reviewer_id=rev_id,
+        reviewer_name=rev_name,
+        created_at=datetime(2026, 8, 5, 11, 0),
+    )
+    session.add_all([h1, h2])
+
+    session.commit()
+    print("--> Seeded Sample Reviewed Security Case CR-2026-9999.")
+
+seed_sample_reviewed_case(db)
+
 # ── 13. Rebuild RAG Search Index ─────────────────────────────────────────────
 
 indexed_count = rag.build_index(db)

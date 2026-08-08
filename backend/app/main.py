@@ -104,6 +104,13 @@ def ensure_db_initialized():
                     seed_career_plans(db)
                 except Exception as cp_err:
                     print(f"--> Auto-seed career plans notice: {cp_err}")
+
+            if db.query(models.Case).filter(models.Case.case_id == "CR-2026-9999").first() is None:
+                try:
+                    from seed import seed_sample_reviewed_case
+                    seed_sample_reviewed_case(db)
+                except Exception as sc_err:
+                    print(f"--> Auto-seed sample case notice: {sc_err}")
         except Exception as seed_err:
             print(f"--> Demo user seed notice: {seed_err}")
         finally:
