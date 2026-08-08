@@ -242,6 +242,15 @@ def check_career_plan_search_gate(
 def check_report_export_gate(
     db: Session, case_id: str, format_str: str, user: models.User
 ) -> models.Case:
+    """
+    Validates user authorization and format parameters before generating
+    a multi-format security case export report.
+
+    Raises:
+        AuthorizationError: If current user role is not permitted (e.g. viewer).
+        ValidationError: If requested export format is not supported.
+        ResourceNotFoundError: If the target case_id does not exist.
+    """
     check_role_authorization(user, [models.RoleEnum.investigator, models.RoleEnum.analyst, models.RoleEnum.admin])
 
     allowed_formats = ["pdf", "html", "csv"]
