@@ -342,7 +342,9 @@ export default function CaseDetail() {
         </div>
         <button
           onClick={() => setShowExportModal(true)}
-          className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2.5 rounded shadow transition flex items-center gap-2 whitespace-nowrap"
+          aria-label="Export Security Case Report"
+          title="Export complete investigative report in PDF, HTML, or CSV format"
+          className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2.5 rounded shadow transition flex items-center gap-2 whitespace-nowrap cursor-pointer"
         >
           <span>⬇</span> Export Case Report (PDF / HTML / CSV)
         </button>
