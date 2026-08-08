@@ -15,6 +15,8 @@ import api, {
   createCaseComment,
   deleteCaseComment,
   fetchOfficers,
+  fetchCaseInvestigation,
+  updateCaseInvestigation,
   getCurrentUser,
 } from "../lib/api.js";
 
@@ -55,6 +57,15 @@ export default function CaseDetail() {
   const [comments, setComments] = useState([]);
   const [officers, setOfficers] = useState([]);
   
+  // Investigation Label State
+  const [investigationData, setInvestigationData] = useState(null);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [newLabel, setNewLabel] = useState("Suspected");
+  const [newNote, setNewNote] = useState("");
+  const [investigationError, setInvestigationError] = useState("");
+  const [investigationSubmitting, setInvestigationSubmitting] = useState(false);
+  const [investigationSuccessMsg, setInvestigationSuccessMsg] = useState("");
+
   // Forms state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignUserId, setAssignUserId] = useState("");
@@ -99,10 +110,56 @@ export default function CaseDetail() {
     fetchSimilarCases(id).then(setSimilarCases).catch(() => setSimilarCases([]));
     fetchFinancialTrail(id).then(setFinancialTrail).catch(() => setFinancialTrail(null));
     fetchCaseTimeline(id).then(setTimeline).catch(() => setTimeline([]));
+    fetchCaseInvestigation(id).then(setInvestigationData).catch(() => setInvestigationData(null));
 
     // Collaboration Data
     loadCollaborationData();
   }, [id]);
+
+  async function handleSaveInvestigationLabel() {
+    if (!newNote.trim() || newNote.trim().length < 3) {
+      setInvestigationError("Investigator note is required and must be at least 3 characters.");
+      return;
+    }
+    setInvestigationSubmitting(true);
+    setInvestigationError("");
+    setInvestigationSuccessMsg("");
+    try {
+      const updated = await updateCaseInvestigation(id, {
+        label: newLabel,
+        note: newNote.trim(),
+      });
+      setInvestigationData(updated);
+      setCaseData((prev) => ({
+        ...prev,
+        investigation_label: updated.current_label,
+        investigator_note: updated.investigator_note,
+        reviewer_name: updated.reviewer_name,
+        review_timestamp: updated.review_timestamp,
+      }));
+      setShowLabelModal(false);
+      setInvestigationSuccessMsg(`Investigation label updated to '${updated.current_label}' successfully!`);
+      setTimeout(() => setInvestigationSuccessMsg(""), 5000);
+    } catch (err) {
+      setInvestigationError(err.response?.data?.error?.message || err.response?.data?.detail || "Failed to update investigation label.");
+    } finally {
+      setInvestigationSubmitting(false);
+    }
+  }
+
+  const renderLabelBadge = (label) => {
+    const l = label || "Unreviewed";
+    if (l === "Suspected") {
+      return <span className="bg-amber/20 text-amber border border-amber/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">⚠️ Suspected</span>;
+    }
+    if (l === "Verified") {
+      return <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">✓ Verified</span>;
+    }
+    if (l === "Needs Review") {
+      return <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">🔍 Needs Review</span>;
+    }
+    return <span className="bg-slate-700/40 text-slate-400 border border-slate-600 px-2.5 py-1 rounded text-xs font-mono">Unreviewed</span>;
+  };
 
   function loadCollaborationData() {
     fetchCaseAssignments(id).then(setAssignments).catch(() => setAssignments([]));
@@ -282,6 +339,83 @@ export default function CaseDetail() {
           {collabError}
         </div>
       )}
+
+      {investigationSuccessMsg && (
+        <div className="mb-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-xs font-mono p-3 rounded flex items-center justify-between">
+          <span>✓ {investigationSuccessMsg}</span>
+          <button onClick={() => setInvestigationSuccessMsg("")} className="text-muted hover:text-ink">✕</button>
+        </div>
+      )}
+
+      {/* ── SECURITY CASE INVESTIGATION REVIEW & LABELS SECTION ───────────────── */}
+      <Section title="🏷️ Security Case Investigation Review & Labels">
+        <div className="bg-panel border border-line rounded-lg p-5 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-4">
+            <div>
+              <p className="text-muted text-xs font-mono uppercase mb-1">Current Investigation Status</p>
+              <div className="flex items-center gap-3">
+                {renderLabelBadge(caseData.investigation_label)}
+                {investigationData?.reviewer_name && (
+                  <span className="text-xs text-muted font-mono">
+                    Reviewed by <strong className="text-ink">{investigationData.reviewer_name}</strong> on{" "}
+                    {new Date(investigationData.review_timestamp).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {canModify && (
+              <button
+                onClick={() => {
+                  setNewLabel(caseData.investigation_label && caseData.investigation_label !== "Unreviewed" ? caseData.investigation_label : "Suspected");
+                  setNewNote(caseData.investigator_note || "");
+                  setShowLabelModal(true);
+                }}
+                className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2 rounded shadow transition flex items-center gap-2"
+              >
+                <span>🏷️</span> Update Investigation Label & Note
+              </button>
+            )}
+          </div>
+
+          {/* Current Note */}
+          {caseData.investigator_note && (
+            <div className="bg-panel2 border border-line rounded p-4">
+              <p className="text-muted text-xs font-mono uppercase mb-1">Investigator Rationale & Evidence Note</p>
+              <p className="text-ink text-sm leading-relaxed whitespace-pre-wrap">{caseData.investigator_note}</p>
+            </div>
+          )}
+
+          {/* Chronological Investigation History Timeline */}
+          <div>
+            <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-3">Investigation Audit History</h4>
+            {!investigationData || !investigationData.history || investigationData.history.length === 0 ? (
+              <p className="text-muted text-xs font-mono">No prior investigation label reviews recorded.</p>
+            ) : (
+              <div className="space-y-3 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-line">
+                {investigationData.history.map((hist) => (
+                  <div key={hist.id} className="relative pl-8 bg-panel2 border border-line rounded p-3 text-xs font-mono">
+                    <div className="absolute left-2 top-3.5 w-2.5 h-2.5 rounded-full bg-teal" />
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted">Changed from</span>
+                        <span className="text-muted font-bold">{hist.previous_label || "Unreviewed"}</span>
+                        <span className="text-teal">➔</span>
+                        {renderLabelBadge(hist.new_label)}
+                      </div>
+                      <span className="text-muted text-[11px]">
+                        {new Date(hist.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-ink mt-1 font-body text-xs">{hist.investigator_note}</p>
+                    <p className="text-muted text-[10px] mt-1">Reviewer: {hist.reviewer_name} (ID: {hist.reviewer_id})</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Section>
 
       {/* ── CASE COLLABORATION SECTION ───────────────────────────────────── */}
       <Section title="🤝 Case Collaboration & Coordination">
@@ -903,6 +1037,93 @@ export default function CaseDetail() {
           </div>
         )}
       </Section>
+
+      {/* ── UPDATE INVESTIGATION LABEL MODAL ── */}
+      {showLabelModal && (
+        <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-panel border border-line rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-4 font-body relative">
+            <div className="flex justify-between items-center border-b border-line pb-3">
+              <h3 className="font-display text-lg text-ink">Update Security Investigation Label</h3>
+              <button
+                onClick={() => setShowLabelModal(false)}
+                className="text-muted hover:text-ink text-sm font-mono"
+              >
+                ✕
+              </button>
+            </div>
+
+            {investigationError && (
+              <div className="bg-crit/10 border border-crit/40 text-crit text-xs p-3 rounded font-mono">
+                {investigationError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase mb-1">Select Investigation Label *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["Suspected", "Verified", "Needs Review"].map((lbl) => (
+                    <button
+                      key={lbl}
+                      type="button"
+                      onClick={() => setNewLabel(lbl)}
+                      className={`p-3 rounded border text-xs font-mono font-semibold transition text-center ${
+                        newLabel === lbl
+                          ? "bg-amber/20 border-amber text-amber shadow-lg"
+                          : "bg-panel2 border-line text-muted hover:border-teal"
+                      }`}
+                    >
+                      {lbl === "Suspected" && "⚠️ "}
+                      {lbl === "Verified" && "✓ "}
+                      {lbl === "Needs Review" && "🔍 "}
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-mono text-muted uppercase">Investigator Reasoning Note *</label>
+                  <span className={`text-[11px] font-mono ${newNote.trim().length < 3 ? "text-crit" : "text-teal"}`}>
+                    {newNote.trim().length}/1000 chars
+                  </span>
+                </div>
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Provide detailed investigator rationale, forensic evidence findings, or verification justification..."
+                  rows={4}
+                  className="w-full bg-panel2 border border-line rounded p-3 text-ink text-sm focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+              </div>
+
+              {/* Mandatory Confirmation Step */}
+              <div className="bg-amber/10 border border-amber/30 rounded p-3 text-xs text-amber font-mono">
+                ⚠️ <strong>Confirmation Required:</strong> Submitting will record an immutable audit event in Activity History and update the official Security Case review status.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-line">
+              <button
+                type="button"
+                onClick={() => setShowLabelModal(false)}
+                className="px-4 py-2 rounded text-xs font-mono text-muted hover:text-ink transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={investigationSubmitting || newNote.trim().length < 3}
+                onClick={handleSaveInvestigationLabel}
+                className="bg-amber hover:bg-amber/90 text-base font-semibold text-xs px-5 py-2 rounded shadow transition disabled:opacity-50"
+              >
+                {investigationSubmitting ? "Saving..." : "Confirm & Save Update"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

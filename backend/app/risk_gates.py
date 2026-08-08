@@ -201,3 +201,25 @@ def check_fir_details_gate(db: Session, case_id: str, payload: schemas.CaseFIRDe
             raise BusinessRuleError("incident_from_date cannot be later than incident_to_date")
 
     return case
+
+
+def check_investigation_label_update_gate(
+    db: Session, case_id: str, payload: schemas.CaseInvestigationUpdate, user: models.User
+) -> models.Case:
+    check_role_authorization(user, [models.RoleEnum.investigator, models.RoleEnum.analyst, models.RoleEnum.admin])
+
+    case = db.query(models.Case).filter(models.Case.id == case_id).first()
+    if not case:
+        case = db.query(models.Case).filter(models.Case.case_id == case_id).first()
+
+    if not case:
+        raise ResourceNotFoundError(f"Security Case with ID '{case_id}' was not found")
+
+    note_clean = (payload.note or "").strip()
+    if not note_clean or len(note_clean) < 3:
+        raise ValidationError("Investigator note is required and must be at least 3 characters long")
+
+    if len(note_clean) > 1000:
+        raise ValidationError("Investigator note cannot exceed 1000 characters")
+
+    return case

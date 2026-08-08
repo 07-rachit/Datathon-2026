@@ -96,6 +96,16 @@ export async function fetchCases(params = {}) {
   return data;
 }
 
+export async function fetchCaseInvestigation(caseId) {
+  const { data } = await api.get(`/cases/${caseId}/investigation`);
+  return data;
+}
+
+export async function updateCaseInvestigation(caseId, payload) {
+  const { data } = await api.put(`/cases/${caseId}/investigation`, payload);
+  return data;
+}
+
 export async function fetchSimilarCases(caseId) {
   const { data } = await api.get(`/cases/${caseId}/similar`);
   return data;

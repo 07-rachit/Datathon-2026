@@ -27,10 +27,36 @@ from app.middleware import (
 from app.activity_logger import ActivityLoggingMiddleware
 
 
+def migrate_db_schema():
+    """Ensure newly added columns exist in SQLite/Postgres tables dynamically."""
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(engine)
+        if "cases" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("cases")]
+            with engine.connect() as conn:
+                if "investigation_label" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN investigation_label VARCHAR DEFAULT 'Unreviewed'"))
+                if "investigator_note" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN investigator_note TEXT"))
+                if "reviewer_id" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN reviewer_id VARCHAR"))
+                if "reviewer_name" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN reviewer_name VARCHAR"))
+                if "review_timestamp" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN review_timestamp DATETIME"))
+                if "previous_investigation_label" not in columns:
+                    conn.execute(text("ALTER TABLE cases ADD COLUMN previous_investigation_label VARCHAR"))
+                conn.commit()
+    except Exception as mig_err:
+        print(f"--> DB Schema Migration Notice: {mig_err}")
+
+
 def ensure_db_initialized():
     """Create DB tables and seed demo RBAC users & cases safely."""
     try:
         Base.metadata.create_all(bind=engine)
+        migrate_db_schema()
         db = SessionLocal()
         try:
             if db.query(models.User).filter(models.User.email == "admin@crimeintel.local").first() is None:

@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 
@@ -129,6 +130,63 @@ class CaseCreate(BaseModel):
         return v
 
 
+class InvestigationLabelEnum(str, Enum):
+    suspected = "Suspected"
+    verified = "Verified"
+    needs_review = "Needs Review"
+    unreviewed = "Unreviewed"
+
+
+class CaseInvestigationUpdate(BaseModel):
+    label: InvestigationLabelEnum
+    note: str
+
+    @field_validator("label")
+    @classmethod
+    def label_allowed(cls, v: InvestigationLabelEnum) -> InvestigationLabelEnum:
+        if v == InvestigationLabelEnum.unreviewed:
+            raise ValueError("Cannot explicitly set investigation label to Unreviewed. Must select Suspected, Verified, or Needs Review.")
+        return v
+
+    @field_validator("note")
+    @classmethod
+    def note_valid(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v or len(v) < 3:
+            raise ValueError("Investigator note is required and must be at least 3 characters long")
+        if len(v) > 1000:
+            raise ValueError("Investigator note cannot exceed 1000 characters")
+        return v
+
+
+class CaseInvestigationHistoryOut(BaseModel):
+    id: str
+    case_id: str
+    previous_label: Optional[str]
+    new_label: str
+    investigator_note: str
+    reviewer_id: str
+    reviewer_name: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CaseInvestigationStatusOut(BaseModel):
+    case_id: str
+    current_label: str
+    investigator_note: Optional[str]
+    reviewer_id: Optional[str]
+    reviewer_name: Optional[str]
+    review_timestamp: Optional[datetime]
+    previous_label: Optional[str]
+    history: List[CaseInvestigationHistoryOut]
+
+    class Config:
+        from_attributes = True
+
+
 class CaseOut(BaseModel):
     id: str
     case_id: str
@@ -143,6 +201,11 @@ class CaseOut(BaseModel):
     longitude: Optional[float]
     summary: Optional[str]
     created_at: datetime
+    investigation_label: Optional[str] = "Unreviewed"
+    investigator_note: Optional[str] = None
+    reviewer_id: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    review_timestamp: Optional[datetime] = None
 
     class Config:
         from_attributes = True

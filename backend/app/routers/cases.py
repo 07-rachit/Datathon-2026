@@ -27,6 +27,8 @@ def list_cases(
     crime_type: Optional[str] = None,
     status: Optional[models.CaseStatus] = None,
     severity: Optional[models.Severity] = None,
+    investigation_label: Optional[models.InvestigationLabelEnum] = None,
+    reviewer_id: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     page: int = 1,
@@ -53,6 +55,10 @@ def list_cases(
         query = query.filter(models.Case.status == status)
     if severity:
         query = query.filter(models.Case.severity == severity)
+    if investigation_label:
+        query = query.filter(models.Case.investigation_label == investigation_label)
+    if reviewer_id:
+        query = query.filter(models.Case.reviewer_id == reviewer_id)
     if date_from:
         query = query.filter(models.Case.incident_date >= date_from)
     if date_to:
@@ -286,5 +292,133 @@ async def create_case(
         asyncio.create_task(proactive_agent.trigger_proactive_case_analysis_task(case.id, SessionLocal))
 
     return case
+
+
+# ── Security Case Investigation Review & Labels Endpoints ────────────────────
+
+@router.get("/{case_id}/investigation", response_model=schemas.CaseInvestigationStatusOut)
+def get_case_investigation_status(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    case = db.query(models.Case).filter(models.Case.id == case_id).first()
+    if not case:
+        case = db.query(models.Case).filter(models.Case.case_id == case_id).first()
+    if not case:
+        raise ResourceNotFoundError(f"Case with ID '{case_id}' was not found")
+
+    history = (
+        db.query(models.CaseInvestigationHistory)
+        .filter(models.CaseInvestigationHistory.case_id == case.id)
+        .order_by(models.CaseInvestigationHistory.created_at.desc())
+        .all()
+    )
+
+    current_label_val = case.investigation_label.value if hasattr(case.investigation_label, "value") else str(case.investigation_label or "Unreviewed")
+
+    return schemas.CaseInvestigationStatusOut(
+        case_id=case.id,
+        current_label=current_label_val,
+        investigator_note=case.investigator_note,
+        reviewer_id=case.reviewer_id,
+        reviewer_name=case.reviewer_name,
+        review_timestamp=case.review_timestamp,
+        previous_label=case.previous_investigation_label,
+        history=history,
+    )
+
+
+@router.put("/{case_id}/investigation", response_model=schemas.CaseInvestigationStatusOut)
+def update_case_investigation_label(
+    case_id: str,
+    payload: schemas.CaseInvestigationUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    case = risk_gates.check_investigation_label_update_gate(db, case_id, payload, current_user)
+
+    prev_label = case.investigation_label.value if hasattr(case.investigation_label, "value") else str(case.investigation_label or "Unreviewed")
+    new_label_val = payload.label.value if hasattr(payload.label, "value") else str(payload.label)
+
+    note_clean = payload.note.strip()
+    now = datetime.utcnow()
+
+    # Update case fields
+    case.previous_investigation_label = prev_label
+    case.investigation_label = payload.label
+    case.investigator_note = note_clean
+    case.reviewer_id = current_user.id
+    case.reviewer_name = current_user.name
+    case.review_timestamp = now
+    case.updated_at = now
+
+    # Create immutable history record
+    hist_entry = models.CaseInvestigationHistory(
+        case_id=case.id,
+        previous_label=prev_label,
+        new_label=new_label_val,
+        investigator_note=note_clean,
+        reviewer_id=current_user.id,
+        reviewer_name=current_user.name,
+        created_at=now,
+    )
+    db.add(hist_entry)
+
+    # Record Audit Log
+    audit_entry = models.AuditLog(
+        user_id=current_user.id,
+        action="update_investigation_label",
+        detail=f"Updated investigation label for case {case.case_id} from '{prev_label}' to '{new_label_val}'. Note: {note_clean[:80]}",
+    )
+    db.add(audit_entry)
+
+    db.commit()
+    db.refresh(case)
+
+    # Record Activity History
+    try:
+        from app.activity_logger import record_activity
+        record_activity(
+            db=db,
+            user_id=current_user.id,
+            user_name=current_user.name,
+            activity_type="investigation_label_updated",
+            module="cases",
+            entity_type="Case",
+            entity_id=case.id,
+            title=f"Investigation Label Updated: {case.case_id}",
+            description=f"Label changed from '{prev_label}' to '{new_label_val}' by {current_user.name}.",
+            metadata={
+                "previous_label": prev_label,
+                "new_label": new_label_val,
+                "investigator_note": note_clean,
+                "reviewer_id": current_user.id,
+                "reviewer_name": current_user.name,
+                "case_id": case.case_id,
+            },
+            status="completed",
+            tags=["investigation", "label", new_label_val.lower().replace(" ", "_")],
+        )
+    except Exception as act_err:
+        print(f"--> Activity history record notice: {act_err}")
+
+    history = (
+        db.query(models.CaseInvestigationHistory)
+        .filter(models.CaseInvestigationHistory.case_id == case.id)
+        .order_by(models.CaseInvestigationHistory.created_at.desc())
+        .all()
+    )
+
+    return schemas.CaseInvestigationStatusOut(
+        case_id=case.id,
+        current_label=new_label_val,
+        investigator_note=case.investigator_note,
+        reviewer_id=case.reviewer_id,
+        reviewer_name=case.reviewer_name,
+        review_timestamp=case.review_timestamp,
+        previous_label=case.previous_investigation_label,
+        history=history,
+    )
 
 

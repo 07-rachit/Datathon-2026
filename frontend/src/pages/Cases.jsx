@@ -4,12 +4,14 @@ import { fetchCases } from "../lib/api.js";
 
 const STATUS_OPTIONS = ["", "open", "closed", "under_review"];
 const SEVERITY_OPTIONS = ["", "low", "medium", "high", "critical"];
+const LABEL_OPTIONS = ["", "Suspected", "Verified", "Needs Review", "Unreviewed"];
 
 export default function Cases() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [severity, setSeverity] = useState("");
+  const [investigationLabel, setInvestigationLabel] = useState("");
   const [data, setData] = useState({ total: 0, results: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +24,7 @@ export default function Cases() {
       if (q) params.q = q;
       if (status) params.status = status;
       if (severity) params.severity = severity;
+      if (investigationLabel) params.investigation_label = investigationLabel;
       const res = await fetchCases(params);
       setData(res);
     } catch (err) {
@@ -36,11 +39,25 @@ export default function Cases() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const renderLabelBadge = (label) => {
+    const l = label || "Unreviewed";
+    if (l === "Suspected") {
+      return <span className="bg-amber/20 text-amber border border-amber/40 px-2 py-0.5 rounded text-[11px] font-mono font-semibold">⚠️ Suspected</span>;
+    }
+    if (l === "Verified") {
+      return <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded text-[11px] font-mono font-semibold">✓ Verified</span>;
+    }
+    if (l === "Needs Review") {
+      return <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded text-[11px] font-mono font-semibold">🔍 Needs Review</span>;
+    }
+    return <span className="bg-slate-700/40 text-slate-400 border border-slate-600 px-2 py-0.5 rounded text-[11px] font-mono">Unreviewed</span>;
+  };
+
   return (
     <div className="p-8">
       <div className="mb-6">
         <p className="font-mono text-teal text-xs tracking-[0.3em] mb-1">RECORDS</p>
-        <h2 className="font-display text-3xl text-ink">Case Search</h2>
+        <h2 className="font-display text-3xl text-ink">Case Search & Investigation Review</h2>
       </div>
 
       <div className="bg-panel border border-line rounded-md p-4 mb-6 flex gap-3 items-end flex-wrap">
@@ -53,6 +70,18 @@ export default function Cases() {
             placeholder="Case ID, title, station..."
             className="w-full bg-panel2 border border-line rounded px-3 py-2 text-ink text-sm focus:outline-none focus:ring-1 focus:ring-teal"
           />
+        </div>
+        <div>
+          <label className="block text-xs font-mono text-muted mb-1">INVESTIGATION LABEL</label>
+          <select
+            value={investigationLabel}
+            onChange={(e) => setInvestigationLabel(e.target.value)}
+            className="bg-panel2 border border-line rounded px-3 py-2 text-ink text-sm focus:outline-none focus:ring-1 focus:ring-teal"
+          >
+            {LABEL_OPTIONS.map((l) => (
+              <option key={l} value={l}>{l || "All Labels"}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-xs font-mono text-muted mb-1">STATUS</label>
@@ -99,6 +128,7 @@ export default function Cases() {
               <th className="text-left px-4 py-3">Case ID</th>
               <th className="text-left px-4 py-3">Title</th>
               <th className="text-left px-4 py-3">District</th>
+              <th className="text-left px-4 py-3">Investigation Label</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-left px-4 py-3">Severity</th>
               <th className="text-left px-4 py-3">Incident Date</th>
@@ -114,6 +144,7 @@ export default function Cases() {
                 <td className="px-4 py-3 font-mono text-teal text-xs">{c.case_id}</td>
                 <td className="px-4 py-3 text-ink">{c.title}</td>
                 <td className="px-4 py-3 text-muted">{c.district}</td>
+                <td className="px-4 py-3">{renderLabelBadge(c.investigation_label)}</td>
                 <td className="px-4 py-3 text-muted capitalize">{c.status.replace("_", " ")}</td>
                 <td className="px-4 py-3 text-muted capitalize">{c.severity}</td>
                 <td className="px-4 py-3 text-muted">
@@ -123,8 +154,8 @@ export default function Cases() {
             ))}
             {!loading && data.results.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                  No cases match these filters.
+                <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                  No security cases match these investigation filters.
                 </td>
               </tr>
             )}

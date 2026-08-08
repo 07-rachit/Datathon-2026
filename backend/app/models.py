@@ -34,6 +34,13 @@ class Severity(str, enum.Enum):
     critical = "critical"
 
 
+class InvestigationLabelEnum(str, enum.Enum):
+    suspected = "Suspected"
+    verified = "Verified"
+    needs_review = "Needs Review"
+    unreviewed = "Unreviewed"
+
+
 # ─── Reference / Lookup Master Tables (Sprint 3 KSP FIR Alignment) ──────────
 
 class CaseCategoryMaster(Base):
@@ -250,6 +257,14 @@ class Case(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Security Case Manual Investigation Review & Labels
+    investigation_label = Column(String, default="Unreviewed", index=True)
+    investigator_note = Column(Text, nullable=True)
+    reviewer_id = Column(String, ForeignKey("users.id"), nullable=True)
+    reviewer_name = Column(String, nullable=True)
+    review_timestamp = Column(DateTime, nullable=True)
+    previous_investigation_label = Column(String, nullable=True)
+
     persons = relationship("Person", back_populates="case")
     evidence = relationship("Evidence", back_populates="case")
     transactions = relationship("FinancialTransaction", back_populates="case")
@@ -265,6 +280,23 @@ class Case(Base):
     comments = relationship("CaseComment", back_populates="case", cascade="all, delete-orphan")
     assignments = relationship("CaseAssignment", back_populates="case", cascade="all, delete-orphan")
     tasks = relationship("CaseTask", back_populates="case", cascade="all, delete-orphan")
+    investigation_history = relationship("CaseInvestigationHistory", back_populates="case", cascade="all, delete-orphan", order_by="desc(CaseInvestigationHistory.created_at)")
+
+
+class CaseInvestigationHistory(Base):
+    __tablename__ = "case_investigation_history"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    case_id = Column(String, ForeignKey("cases.id"), nullable=False, index=True)
+    previous_label = Column(String, nullable=True)
+    new_label = Column(String, nullable=False)
+    investigator_note = Column(Text, nullable=False)
+    reviewer_id = Column(String, ForeignKey("users.id"), nullable=False)
+    reviewer_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    case = relationship("Case", back_populates="investigation_history")
+    reviewer = relationship("User")
 
 
 class CaseFIRDetails(Base):
