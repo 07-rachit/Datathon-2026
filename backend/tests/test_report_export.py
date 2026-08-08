@@ -36,11 +36,11 @@ def test_export_case_report_pdf(client, db_session, investigator_headers):
     db_session.commit()
 
     res = client.get(f"/api/export/cases/{case.id}/report?format=pdf", headers=investigator_headers)
-    assert res.status_code == 200
-    assert res.headers["content-type"] == "application/pdf"
+    assert res.status_code == 200, f"Expected 200 OK, got {res.status_code}"
+    assert res.headers["content-type"] == "application/pdf", "Content-Type must be application/pdf"
     assert "attachment; filename=" in res.headers["content-disposition"]
     assert res.headers["content-disposition"].endswith('.pdf"')
-    assert len(res.content) > 500
+    assert len(res.content) > 500, "PDF payload must not be empty"
 
 
 def test_export_case_report_html(client, db_session, investigator_headers):
