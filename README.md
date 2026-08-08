@@ -27,61 +27,80 @@ A complete, enterprise-grade law enforcement case management and AI intelligence
 
 ---
 
-## 🏆 Current Bounties (100% Implemented & Verified)
+## 🏆 Latest 3 Bounties (100% Implemented & Verified)
 
 ### 1. 🏷️ **Investigation Labels for Security Cases**
-- **Label Categorization**: Every security case can be reviewed and marked with one of three official investigation labels: **Suspected**, **Verified**, or **Needs Review**.
-- **Mandatory Investigator Notes**: Enforces a required investigator reasoning note (3–1000 characters) explaining the evidence behind each label update.
-- **Audit Timeline History**: Creates immutable audit records (`CaseInvestigationHistory` table) storing reviewer ID, reviewer name, review timestamp, previous label, new label, and reasoning notes.
-- **UI & Dashboard Integration**: Displays prominent color-coded badges (*Amber Suspected, Emerald Verified, Indigo Needs Review*) on the Dashboard, Case Search, and Case Details pages, accompanied by a dedicated **Investigation Review Modal**.
-- **Pre-Reviewed Sample Case**: Includes pre-seeded reviewed sample security case `CR-2026-9999` (*"High-Risk Cyber-Financial Extortion Incident"*).
+- **Official Label Categorization**: Authorized reviewers can mark every security case record with one of three official investigation labels: **Suspected**, **Verified**, or **Needs Review**.
+- **Mandatory Investigator Notes & Validation**: Enforces a required investigator reasoning note (3–1000 characters) explaining the evidence and rationale behind each label update. Invalid or missing notes are blocked by Pydantic validation and risk gates.
+- **Immutable Audit Timeline History**: Creates persistent audit entries in the `CaseInvestigationHistory` database table, storing reviewer ID, reviewer name, review timestamp, previous label, new label, and reasoning notes permanently.
+- **REST APIs & RBAC Access Control**: Developed `GET /api/cases/{case_id}/investigation` and `PUT /api/cases/{case_id}/investigation` endpoints with strict role gating (`investigator`, `analyst`, `admin` permitted; `viewer` blocked with 403 `AuthorizationError`).
+- **UI & Dashboard Integration**: Displays color-coded badges (*Amber ⚠️ Suspected, Emerald ✓ Verified, Indigo 🔍 Needs Review*) across the Dashboard, Case Search, and Case Details pages, accompanied by a dedicated **Investigation Review Modal**.
+- **Pre-Reviewed Sample Demonstration Case**: Includes pre-seeded reviewed sample security case **`CR-2026-9999`** (*"High-Risk Cyber-Financial Extortion Incident"*).
+- **Backend Test Suite**: Verified with dedicated unit and integration tests in `tests/test_investigation_labels.py`.
 
 ### 2. 🎯 **Role-Aware Security Case Filters**
-- **Role-Scoped API**: Extended `GET /api/cases?role_scope=...` to support role-based list query scoping for **Admin** (`all`), **Investigator** (`investigator`), **Reviewer** (`reviewer`), **Authority HQ** (`authority`), **Hospital / Medico-Legal** (`hospital`), and **User / Citizen** (`user`).
+- **Role-Scoped API Query Engine**: Extended `GET /api/cases?role_scope=...` to support role-based list query scoping:
+  - **`admin`**: Full platform overview (all security case records).
+  - **`investigator`**: Cases active for investigation (`open`, `under_review`, `Suspected`, `Verified`, `Needs Review`, or user assigned).
+  - **`reviewer`**: Cases requiring review decision (`Needs Review`, `Suspected`, or reviewer assigned).
+  - **`authority`**: High-level security incidents (`high`/`critical` severity or statutory FIR registered cases).
+  - **`hospital`**: Medico-legal & violent security incidents (*Assault, Violent Offense, Emergency Cyber Threat*).
+  - **`user`**: Citizen-reported security cases and user-assigned records.
 - **Role Scope Bar & Tabs**: Added a prominent Role Scope Selector Bar on the Cases page with role icons, descriptions, and a quick role switcher for live judging demonstrations.
-- **Visible Count Indicator**: Prominent badge displaying `📊 Visible Count: X Security Cases Scoped` updating dynamically as filters or role scopes change.
-- **Multi-Status Filtering**: Combines role-aware scope filters with status, severity, and investigation label filters.
+- **Visible Scoped Count Indicator**: Prominent badge displaying `📊 Visible Count: X Security Cases Scoped` updating dynamically as filters or role scopes change.
+- **Multi-Status & Keyword Combination**: Combines role-aware scope filters with status, severity, investigation label, and keyword search filters.
+- **Backend Test Suite**: Verified with dedicated tests in `tests/test_role_filters.py`.
 
 ### 3. 📄 **Project-Specific Security Case Report Export**
 - **Multi-Format Export Engine**: Built reusable report generation services in `backend/app/routers/export.py` for **PDF** (ReportLab document with tables and badges), **HTML** (printable web report with CSS badges), and **CSV** (multi-section spreadsheet tables).
-- **Comprehensive Data Reuse**: Automatically populates all captured project fields (case ID, title, crime type, station, district, status, severity, incident date, investigation label, reviewer info, investigator notes, FIR statutory details, evidence log, suspect roster, financial trail, and audit history) without manual data re-entry.
+- **Comprehensive Data Reuse**: Automatically populates all captured project fields (case ID, title, crime type, station, district, status, severity, incident date, investigation label, reviewer info, investigator notes, FIR statutory details, evidence log, suspect roster, financial trail, and audit history) without manual data re-entry or duplication.
 - **REST APIs & Risk Gate**: `GET /api/export/cases/{case_id}/report?format=pdf|html|csv` with risk gate authorization (`check_report_export_gate`), 404/422 validation error handling, and immutable audit/activity logging (`export_security_case_report`).
 - **Frontend Export Modal**: Prominent **Export Case Report (PDF / HTML / CSV)** button on Case Details page with interactive format selection modal and automated file downloads (`SecurityCase_<CaseID>_<Date>.<ext>`).
 - **Sample Export Artifacts**: Pre-generated sample export files for judging demonstration:
   - `SecurityCase_CR-2026-9999_Sample.pdf`
   - `SecurityCase_CR-2026-9999_Sample.html`
   - `SecurityCase_CR-2026-9999_Sample.csv`
+- **Backend Test Suite**: Verified with dedicated tests in `tests/test_report_export.py`.
 
 ---
 
-## 🌟 Previous Bounties & Feature Extensions (100% Implemented)
+## 🌟 5 Previous Bounties (100% Implemented & Detailed)
 
-### 📊 **Bounty 1: Agent Execution Observability & Run Tracking** (`/observability`)
-- **Real-Time Execution Trees**: Visualizes multi-step AI agent trajectories, tool call invocations, latency breakdowns, and token counts.
-- **Tool Rankings & Performance**: Ranks tool usage metrics and execution duration across investigative tools.
-- **Sensitive Data Sanitization**: Automatically scrubs passwords, tokens, secrets, and statutory sensitive attributes (`caste_id`, `religion_id`) from prompt logs and tool traces.
+### 📊 **Previous Bounty 1: Agent Execution Observability & Run Tracking** (`/observability`)
+- **Real-Time Execution Trees**: Captures multi-step AI agent runs (`agent_runs`, `agent_tool_calls` tables), visualizing tool call chains, step execution order, latency breakdowns, and token consumption metrics.
+- **Tool Performance & Usage Ranking**: Ranks tool execution frequency and latency across investigative tools (`search_cases`, `get_offender_risk`, `get_financial_trail`, etc.).
+- **Sensitive Data Sanitization**: Automatically scrubs passwords, tokens, secrets, and statutory sensitive attributes (`caste_id`, `religion_id`) from prompt logs and tool call inputs/outputs.
+- **Observability Desk UI**: Dedicated Ops-Room Observability page (`Observability.jsx`) featuring interactive execution tree inspection modals, latency distribution charts, and search filters.
+- **Backend Test Suite**: Verified with `tests/test_observability.py`.
 
-### 📜 **Bounty 2: Persistent Activity History System** (`/activity`)
-- **Centralized Event Logging**: Intercepts all mutating requests, AI generation queries, CSV imports, PDF/HTML exports, and user operations into persistent database history (`activity_history` table).
-- **REST APIs & Inspector Drawer**: Search (`q`), filter by module, status, user, and date range, with expandable JSON metadata inspector drawers on `/activity`.
+### 📜 **Previous Bounty 2: Centralized Persistent Activity History Framework** (`/activity`)
+- **Centralized Event Interceptor Middleware**: `ActivityLoggingMiddleware` automatically intercepts all mutating HTTP requests, AI queries, CSV imports, report exports, and user actions into persistent database history (`activity_history` table).
+- **REST APIs & Inspector Drawer**: Search (`q`), filter by `module`, `activity_type`, `status`, `user_id`, and `date_range`, with expandable JSON metadata inspector drawers on `/activity`.
+- **Immutability & Access Control**: Audit logs are read-only for investigators and analysts; deletion is strictly restricted to Super Admin users (`admin` role).
+- **Backend Test Suite**: Verified with `tests/test_activity_history.py`.
 
-### ⚙️ **Bounty 3: Background Tasks Engine with Exponential Retries** (`/jobs`)
-- **Async Non-Blocking Execution**: Offloads heavy tasks (AI research, CSV case imports, report generation) to background worker threads.
-- **Automatic Retry Engine**: Detects transient errors and retries jobs with exponential backoff (`QUEUED` $\rightarrow$ `RUNNING` $\rightarrow$ `RETRYING` $\rightarrow$ `COMPLETED`).
-- **Job Center UI**: Auto-polling progress bars, log drawers, output download links, and 1-click manual retry buttons on `/jobs`.
+### ⚙️ **Previous Bounty 3: Background Tasks Engine with Exponential Retries** (`/jobs`)
+- **Non-Blocking Async Worker Pipeline**: Offloads heavy tasks (AI research queries, bulk CSV case imports, report exports, trend calculations) to background worker threads (`background_jobs` table).
+- **Automatic Retry Engine**: Detects transient errors and retries jobs with exponential backoff (`QUEUED` $\rightarrow$ `RUNNING` $\rightarrow$ `RETRYING` $\rightarrow$ `COMPLETED`). Halts immediately on non-recoverable validation/auth failures without wasting cycles.
+- **Job Center UI**: Features auto-polling progress bars, log drawers, output download links, job cancellation, and 1-click manual retry buttons on `/jobs`.
+- **Backend Test Suite**: Verified with `tests/test_background_jobs.py`.
 
-### ⚙️ **Bounty 4: Automated AI Workflows & Human Approval Gates** (`/workflows`)
-- **Risk-Aware Multi-Step Engine**: Decomposes requests into ordered execution plans (`workflows` table) classified by risk levels (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
-- **Human Approval Gates**: Automatically pauses high/critical actions (account freezes, judicial arrest warrants) for officer confirmation before execution.
-- **Resumable State**: Resumes execution seamlessly upon approval without repeating completed steps.
+### ⚙️ **Previous Bounty 4: Automated AI Workflows & Human Approval Gates** (`/workflows`)
+- **Risk-Aware Multi-Step Execution Engine**: Decomposes complex user instructions into ordered execution plans (`workflows`, `workflow_steps`, `workflow_approvals` tables) classified by step risk levels (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+- **Human Approval Gates**: Low and medium risk steps execute automatically. High and critical risk operations (financial account freezes, judicial arrest warrants) automatically pause the workflow and generate a human approval request.
+- **Resumable Execution & Approval Center**: Workflows persist state across restarts and resume execution from the exact paused step upon human approval (`APPROVED`). Features Approval Center UI on `/workflows`.
+- **Backend Test Suite**: Verified with `tests/test_workflows.py`.
 
-### 🌐 **Bounty 5: Public Citizen Crime Reporting Portal & Verification** (`/report-crime` & `/citizen-reports`)
-- **Public Reporting Portal**: Allows citizens to submit crime reports (`/report-crime`) with incident photos/documents, generating unique tracking codes (`REP-YYYY-XXXX`).
-- **Officer Verification Workflow**: Officers inspect reports on `/citizen-reports`, verify evidence, and promote valid reports directly into formal KSP FIR security cases.
+### 🌐 **Previous Bounty 5: Public Citizen Crime Reporting Portal & Verification** (`/report-crime` & `/citizen-reports`)
+- **Public Citizen Reporting Portal**: Enables public citizens to submit crime reports anonymously (`/report-crime`) with incident photos/documents, generating unique tracking codes (`REP-YYYY-XXXX`).
+- **Officer Verification Workflow**: Officers inspect incoming reports on `/citizen-reports`, verify evidence integrity, and promote valid reports directly into formal KSP FIR security cases.
+- **Backend Test Suite**: Verified with `tests/test_citizen_reports.py`.
 
 ### 📚 **Bonus Bounty: Learning Search & Topic Filters for Career Plans** (`/career-plans`)
-- **Search & Filtering System**: Enables learners to search career plans by keyword (`q`) and apply filters for **Topic**, **Difficulty Level**, **Target Goal**, and **Deadline Horizon**.
+- **Career Plans Database**: Stores career plan records containing searchable metadata including title, description, topic, difficulty level (`Beginner`, `Intermediate`, `Advanced`, `Expert`), target goal, deadline, tags, milestones, and notes.
+- **Search & Multi-Criteria Filtering**: Keyword search (`q`) across titles, descriptions, goals, milestones, notes, or tags, combined with filters for Topic, Difficulty, Target Goal, and Deadline Horizon.
 - **Interactive Active Chips Bar**: Removable filter chips with individual `(x)` buttons and a single-click **Reset Filters** button (`🔄 Reset Filters`).
+- **Backend Test Suite**: Verified with `tests/test_career_plans.py`.
 
 ---
 
