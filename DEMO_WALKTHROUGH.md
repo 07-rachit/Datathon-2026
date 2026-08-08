@@ -7,7 +7,7 @@
 ## ⏱️ Live Presentation Flow (12–15 Minutes)
 
 ### Step 1: Login & Ops-Room Dashboard
-- **Page to Open:** `http://localhost:5173/login` $\rightarrow$ Sign in as **Lead Analyst** (`analyst@crimeintel.local` / `Analyst@123`).
+- **Page to Open:** `https://datathon-2026.vercel.app/login` (or `/login`) $\rightarrow$ Sign in as **Lead Analyst** (`analyst@crimeintel.local` / `Analyst@123`).
 - **What to Click/Ask:** Navigate to **01 · Dashboard**.
 - **What to Point Out:** Point out the dark ops-room aesthetic, real-time KPI metrics (Total Cases, Heinous Offence Ratio, Active Investigation Counts), 30-day district incident delta alerts, and high-severity incident feed.
 - **Proves Pillar:** **Pillar 5 (Predictive Analytics & Trend Alerts)** & **Pillar 6 (Secure RBAC & Governance)**.

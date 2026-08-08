@@ -144,11 +144,26 @@ CrimeIntel enables multi-investigator coordination across case files:
 
 ## 🚀 Deployment & Vercel Serverless Configuration
 
-The platform is configured for instant serverless deployment on **Vercel** (`vercel.json`):
-- **Serverless API Routes**: FastAPI backend deployed as Python serverless functions under `/api/(.*)`.
-- **Frontend SPA**: React Vite single-page app with client-side routing fallback.
+The platform is deployed serverlessly on **Vercel** (`vercel.json`):
+- 🌐 **Vercel Production Application UI**: `https://datathon-2026.vercel.app`
+- 📚 **Vercel Production API Documentation**: `https://datathon-2026.vercel.app/api/docs`
+- ⚡ **Vercel Serverless API Base**: `/api` (Production Serverless Python Backend)
 
-### 1. Local Development Setup
+### 1. Vercel Serverless Production Links
+- **Live Application URL**: `https://datathon-2026.vercel.app`
+- **Live OpenAPI Documentation**: `https://datathon-2026.vercel.app/api/docs`
+- **Default RBAC Credentials**:
+  - Admin: `admin@crimeintel.local` / `Admin@123`
+  - Analyst: `analyst@crimeintel.local` / `Analyst@123`
+  - Investigator: `investigator@crimeintel.local` / `Investigator@123`
+  - Viewer: `viewer@crimeintel.local` / `Viewer@123`
+
+```bash
+# Deploy to Vercel via CLI
+vercel --prod
+```
+
+### 2. Local Development Setup
 ```bash
 # Backend Setup
 cd backend
@@ -158,25 +173,12 @@ pip install -r requirements.txt
 python seed.py                   # Populates connected demo storylines A-F & sample case CR-2026-9999
 uvicorn app.main:app --reload --port 8000
 ```
-- API Docs: `http://localhost:8000/docs`
-- Default Credentials:
-  - Admin: `admin@crimeintel.local` / `Admin@123`
-  - Analyst: `analyst@crimeintel.local` / `Analyst@123`
-  - Investigator: `investigator@crimeintel.local` / `Investigator@123`
-  - Viewer: `viewer@crimeintel.local` / `Viewer@123`
 
 ```bash
 # Frontend Setup
 cd frontend
 npm install
 npm run dev
-```
-- Frontend UI: `http://localhost:5173`
-
-### 2. Vercel Serverless Deployment
-```bash
-# Deploy to Vercel via CLI
-vercel --prod
 ```
 
 ---
