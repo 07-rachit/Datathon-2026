@@ -89,23 +89,26 @@ export default function Layout({ children }) {
               )}
             </NavLink>
           ))}
-          {/* Dynamic role-gated navigation */}
-          {dynamicNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-5 py-2.5 text-sm transition border-l-2 ${
-                  isActive
-                    ? "border-amber text-ink bg-panel2 font-semibold"
-                    : "border-transparent text-muted hover:text-ink hover:bg-panel2/60"
-                }`
-              }
-            >
-              <span className="font-mono text-xs text-muted">{item.code}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          {/* Dynamic role-gated navigation with sequential numbering */}
+          {dynamicNav.map((item, index) => {
+            const itemCode = String(NAV.length + index + 1).padStart(2, "0");
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-5 py-2.5 text-sm transition border-l-2 ${
+                    isActive
+                      ? "border-amber text-ink bg-panel2 font-semibold"
+                      : "border-transparent text-muted hover:text-ink hover:bg-panel2/60"
+                  }`
+                }
+              >
+                <span className="font-mono text-xs text-muted">{itemCode}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
         <div className="px-5 py-4 border-t border-line">
           <p className="text-ink text-sm">{user?.name}</p>
