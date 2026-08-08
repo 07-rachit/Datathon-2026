@@ -122,3 +122,13 @@ def test_list_cases_role_scope_user(client, db_session, investigator_headers):
     data = res.json()
     assert data["active_role_scope"] == "user"
     assert isinstance(data["total"], int)
+
+
+def test_list_cases_role_scope_combined_with_severity(client, db_session, investigator_headers):
+    """Test combining role_scope with explicit severity and status filters."""
+    res = client.get("/api/cases?role_scope=authority&severity=critical", headers=investigator_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["active_role_scope"] == "authority"
+    for case in data["results"]:
+        assert case["severity"] == "critical"
