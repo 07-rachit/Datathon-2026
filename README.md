@@ -27,6 +27,15 @@ A complete, enterprise-grade law enforcement case management and AI intelligence
 
 ---
 
+### 🛡️ Feature Extensions & Bounties (100% Implemented)
+
+- 🏷️ **Investigation Labels for Security Cases**: Mark cases as **Suspected**, **Verified**, or **Needs Review** with mandatory investigator reasoning notes, audit timeline logging (`CaseInvestigationHistory`), and pre-reviewed sample case `CR-2026-9999`.
+- 🎯 **Role-Aware Security Case Filters**: Role-scoped list query engine (`admin`, `investigator`, `reviewer`, `authority`, `hospital`, `user`), visible count indicator badge (`Visible Count: X Security Cases Scoped`), and live role switcher.
+- 📄 **Project-Specific Security Case Report Export**: Downloadable multi-format investigative reports in **PDF**, **HTML**, and **CSV** reusing all captured project metadata, FIR statutory details, evidence items, and audit history without data duplication.
+- 📚 **Learning Search & Topic Filters**: Career planning search and filtering across topics, difficulty levels, target goals, and deadlines.
+
+---
+
 ## ⚖️ Non-Biased Risk Scoring Model
 
 Offender risk scores are strictly **behavioral and criminological** (case volume, max severity, recency, MO repetition, and network centrality). 
