@@ -44,6 +44,7 @@ def record_activity(
     status: str = "success",
     tags: Optional[List[str]] = None,
     related_resources: Optional[List[Dict[str, Any]]] = None,
+    execution_duration_ms: Optional[float] = None,
 ) -> models.ActivityHistory:
     """
     Record an immutable activity log entry into persistent database history.

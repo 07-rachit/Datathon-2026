@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 
 
 from app.models import RoleEnum, CaseStatus, Severity
