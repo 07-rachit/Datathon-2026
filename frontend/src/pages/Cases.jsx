@@ -109,8 +109,11 @@ export default function Cases() {
             return (
               <button
                 key={role.id}
+                role="tab"
+                aria-selected={isActive}
+                aria-label={`Scope cases for ${role.label}`}
                 onClick={() => handleSelectRoleScope(role.id)}
-                className={`p-3 rounded-lg border text-left flex flex-col justify-between transition ${
+                className={`p-3 rounded-lg border text-left flex flex-col justify-between transition cursor-pointer ${
                   isActive
                     ? "bg-amber/20 border-amber text-ink shadow"
                     : "bg-panel2 border-line text-muted hover:border-teal hover:text-ink"
