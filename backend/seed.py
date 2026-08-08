@@ -982,6 +982,11 @@ seed_career_plans(db)
 
 
 def seed_sample_reviewed_case(session):
+    """
+    Seeds a pre-reviewed sample security case (CR-2026-9999) complete with
+    Verified investigation label, reviewer notes, evidence items, suspects,
+    and investigation history timeline for judging demonstration.
+    """
     if session.query(models.Case).filter(models.Case.case_id == "CR-2026-9999").first() is not None:
         return
 
