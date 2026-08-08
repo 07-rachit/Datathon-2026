@@ -215,6 +215,7 @@ class CaseListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    active_role_scope: Optional[str] = None
     results: List[CaseOut]
 
 

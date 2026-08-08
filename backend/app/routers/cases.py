@@ -29,6 +29,7 @@ def list_cases(
     severity: Optional[models.Severity] = None,
     investigation_label: Optional[models.InvestigationLabelEnum] = None,
     reviewer_id: Optional[str] = None,
+    role_scope: Optional[str] = Query(None, description="Role scope filter: admin, investigator, reviewer, authority, hospital, user"),
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     page: int = 1,
@@ -37,6 +38,54 @@ def list_cases(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     query = db.query(models.Case)
+
+    effective_scope = (role_scope or "").lower().strip()
+    if effective_scope == "investigator":
+        query = query.filter(
+            or_(
+                models.Case.status.in_([models.CaseStatus.open, models.CaseStatus.under_review]),
+                models.Case.investigation_label.in_([
+                    models.InvestigationLabelEnum.suspected,
+                    models.InvestigationLabelEnum.verified,
+                    models.InvestigationLabelEnum.needs_review,
+                ]),
+                models.Case.assignments.any(models.CaseAssignment.assigned_to_user_id == current_user.id),
+            )
+        )
+    elif effective_scope in ["reviewer", "reviewer_authority"]:
+        query = query.filter(
+            or_(
+                models.Case.investigation_label.in_([
+                    models.InvestigationLabelEnum.needs_review,
+                    models.InvestigationLabelEnum.suspected,
+                ]),
+                models.Case.reviewer_id == current_user.id,
+            )
+        )
+    elif effective_scope == "authority":
+        query = query.filter(
+            or_(
+                models.Case.severity.in_([models.Severity.high, models.Severity.critical]),
+                models.Case.fir_details != None,
+            )
+        )
+    elif effective_scope == "hospital":
+        query = query.filter(
+            or_(
+                models.Case.crime_type.ilike("%Assault%"),
+                models.Case.crime_type.ilike("%Murder%"),
+                models.Case.crime_type.ilike("%Fraud%"),
+                models.Case.severity.in_([models.Severity.high, models.Severity.critical]),
+            )
+        )
+    elif effective_scope == "user":
+        query = query.filter(
+            or_(
+                models.Case.assignments.any(models.CaseAssignment.assigned_to_user_id == current_user.id),
+                models.Case.reviewer_id == current_user.id,
+                models.Case.status == models.CaseStatus.open,
+            )
+        )
 
     if q:
         like = f"%{q}%"
@@ -72,7 +121,13 @@ def list_cases(
         .all()
     )
 
-    return schemas.CaseListResponse(total=total, page=page, page_size=page_size, results=results)
+    return schemas.CaseListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        active_role_scope=effective_scope or "all",
+        results=results,
+    )
 
 
 @router.get("/map", response_model=list[schemas.MapCase])
